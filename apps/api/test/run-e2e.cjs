@@ -179,6 +179,12 @@ function splitSqlStatements(sql) {
   return statements;
 }
 
+function rewriteSchemaReferences(sql, schema) {
+  return sql
+    .replaceAll('"public".', `"${schema}".`)
+    .replaceAll(`'public."`, `'${schema}."`);
+}
+
 function getMigrationStatements(schema) {
   return readdirSync(MIGRATIONS_DIRECTORY)
     .filter((entry) => entry !== 'migration_lock.toml')
@@ -190,9 +196,9 @@ function getMigrationStatements(schema) {
         return [];
       }
 
-      const migrationSql = readFileSync(migrationFile, 'utf8').replaceAll(
-        '"public".',
-        `"${schema}".`,
+      const migrationSql = rewriteSchemaReferences(
+        readFileSync(migrationFile, 'utf8'),
+        schema,
       );
 
       return splitSqlStatements(migrationSql);

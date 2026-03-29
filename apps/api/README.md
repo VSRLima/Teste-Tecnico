@@ -174,6 +174,9 @@ Fluxo:
 npm run test --workspace @directcash/api
 
 # e2e
+npm run test:e2e --workspace @directcash/api
+
+# opcional: sobrescreve a base usada para criar o schema isolado
 TEST_DATABASE_URL=postgresql://<user>:<password>@localhost:5433/directcash?schema=public npm run test:e2e --workspace @directcash/api
 
 # cobertura
@@ -182,7 +185,7 @@ npm run test:cov --workspace @directcash/api
 
 Observações sobre e2e:
 
-- o runner cria um schema isolado a partir de `TEST_DATABASE_URL`
+- o runner cria um schema isolado a partir de `TEST_DATABASE_URL` quando definido, ou de `DATABASE_URL` carregado de `.env`
 - o parser de migrations trata comentários, strings e blocos `$$...$$` sem quebrar em `;` incorretamente
 - CI injeta as variáveis de PostgreSQL e Redis necessárias antes de executar `npm run test:e2e:api`
 

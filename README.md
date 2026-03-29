@@ -156,6 +156,7 @@ Backend:
 - `npm run db:push --workspace @directcash/api`
 - `npm run db:seed --workspace @directcash/api`
 - `npm run test --workspace @directcash/api -- --runInBand`
+- `npm run test:e2e --workspace @directcash/api`
 - `TEST_DATABASE_URL=postgresql://<user>:<password>@localhost:5433/directcash?schema=public npm run test:e2e --workspace @directcash/api`
 
 ## Regras de acesso
