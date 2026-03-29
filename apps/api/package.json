@@ -24,7 +24,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "node --env-file=.env --env-file=.env.test ./test/run-e2e.cjs"
+    "test:e2e": "node --env-file-if-exists=.env --env-file=.env.test ./test/run-e2e.cjs"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
