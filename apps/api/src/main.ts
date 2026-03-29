@@ -4,19 +4,9 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import basicAuth from 'express-basic-auth';
 import { AppModule } from './app.module';
+import { buildCorsOriginValidator, parseAllowedOrigins } from './config/cors';
 import { assertStrongSecretsOutsideTests } from './config/runtime-security';
 import { AppLogger } from './observability/app-logger.service';
-
-function getAllowedOrigins(configService: ConfigService) {
-  return configService
-    .get<string>(
-      'ALLOWED_ORIGINS',
-      'http://localhost:3000,http://127.0.0.1:3000',
-    )
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-}
 
 async function bootstrap() {
   assertStrongSecretsOutsideTests(process.env);
@@ -25,12 +15,23 @@ async function bootstrap() {
     bufferLogs: true,
   });
   const configService = app.get(ConfigService);
-  const allowedOrigins = getAllowedOrigins(configService);
-  app.useLogger(app.get(AppLogger));
+  const allowedOrigins = parseAllowedOrigins(
+    configService.get<string>('ALLOWED_ORIGINS'),
+  );
+  const logger = app.get(AppLogger);
+  app.useLogger(logger);
+
+  logger.logWithMetadata(
+    allowedOrigins.length > 0 ? 'log' : 'warn',
+    'CORS allowlist configured',
+    { allowedOrigins },
+    'Bootstrap',
+  );
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: buildCorsOriginValidator(allowedOrigins, logger),
     credentials: true,
+    optionsSuccessStatus: 204,
   });
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
