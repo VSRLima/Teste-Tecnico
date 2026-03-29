@@ -3,7 +3,10 @@
 import { useDeferredValue, useEffect, useEffectEvent, useState } from 'react';
 import styles from './dashboard-app.module.css';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333/api';
+const LOCAL_API_URL = 'http://localhost:3333/api';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (process.env.NODE_ENV === 'development' ? LOCAL_API_URL : '');
 const SESSION_STORAGE_KEY = 'directcash.session';
 const LEGACY_TOKEN_STORAGE_KEY = 'directcash.token';
 const LEGACY_USER_STORAGE_KEY = 'directcash.user';
@@ -103,6 +106,8 @@ type FeedbackState = {
   message: string;
   tone: FeedbackTone;
 };
+
+type Messages = (typeof copy)[Locale];
 
 const initialLoginForm: LoginFormState = {
   email: '',
@@ -250,6 +255,8 @@ const copy = {
     invalidApiSession: 'Sessão inválida retornada pela API.',
     sessionExpired: 'Sessão expirada.',
     sessionExpiredLogin: 'Sessão expirada. Faça login novamente.',
+    apiNotConfigured:
+      'API não configurada neste deploy. Defina NEXT_PUBLIC_API_URL com a URL pública da API.',
     authReviewFields: 'Revise os campos de acesso antes de continuar.',
     authFailure: 'Falha na autenticação.',
     authFailed: 'Falha ao autenticar.',
@@ -415,6 +422,8 @@ const copy = {
     invalidApiSession: 'Invalid session returned by the API.',
     sessionExpired: 'Session expired.',
     sessionExpiredLogin: 'Session expired. Sign in again.',
+    apiNotConfigured:
+      'API is not configured for this deployment. Set NEXT_PUBLIC_API_URL to the public API URL.',
     authReviewFields: 'Review the access fields before continuing.',
     authFailure: 'Authentication failed.',
     authFailed: 'Unable to authenticate.',
@@ -720,6 +729,14 @@ async function parseJsonResponse<T>(response: Response) {
   return (await response.json()) as T;
 }
 
+function getApiUrl(messages: Messages) {
+  if (!API_URL) {
+    throw new Error(messages.apiNotConfigured);
+  }
+
+  return API_URL;
+}
+
 function getFeedbackClassName(feedback: FeedbackState | null) {
   if (!feedback) {
     return '';
@@ -989,7 +1006,8 @@ export function DashboardApp() {
   }
 
   async function refreshSessionWithToken(refreshToken: string) {
-    const response = await fetch(`${API_URL}/auth/refresh`, {
+    const apiUrl = getApiUrl(messages);
+    const response = await fetch(`${apiUrl}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1052,8 +1070,9 @@ export function DashboardApp() {
     setIsSyncingCampaigns(true);
 
     try {
+      const apiUrl = getApiUrl(messages);
       const response = await runAuthenticatedRequest(
-        `${API_URL}/campaigns`,
+        `${apiUrl}/campaigns`,
         undefined,
         activeSession,
       );
@@ -1091,8 +1110,9 @@ export function DashboardApp() {
     setIsUsersLoading(true);
 
     try {
+      const apiUrl = getApiUrl(messages);
       const response = await runAuthenticatedRequest(
-        `${API_URL}/users`,
+        `${apiUrl}/users`,
         undefined,
         activeSession,
       );
@@ -1146,10 +1166,11 @@ export function DashboardApp() {
       );
 
       await loadCampaigns(refreshed.session);
-    } catch {
+    } catch (error) {
       clearSession();
       setAuthFeedback({
-        message: messages.sessionExpiredLogin,
+        message:
+          error instanceof Error ? error.message : messages.sessionExpiredLogin,
         tone: 'info',
       });
       setIsAuthPanelOpen(true);
@@ -1297,7 +1318,8 @@ export function DashboardApp() {
     setAuthFeedback(null);
 
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const apiUrl = getApiUrl(messages);
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1351,7 +1373,8 @@ export function DashboardApp() {
     setAuthFeedback(null);
 
     try {
-      const response = await runAuthenticatedRequest(`${API_URL}/users`, {
+      const apiUrl = getApiUrl(messages);
+      const response = await runAuthenticatedRequest(`${apiUrl}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1443,6 +1466,7 @@ export function DashboardApp() {
     setUsersFeedback(null);
 
     try {
+      const apiUrl = getApiUrl(messages);
       const payload = {
         name: managedUserForm.name.trim(),
         email: managedUserForm.email.trim(),
@@ -1452,7 +1476,7 @@ export function DashboardApp() {
           : {}),
       };
       const response = await runAuthenticatedRequest(
-        `${API_URL}/users/${editingManagedUserId}`,
+        `${apiUrl}/users/${editingManagedUserId}`,
         {
           method: 'PATCH',
           headers: {
@@ -1500,8 +1524,9 @@ export function DashboardApp() {
     setUsersFeedback(null);
 
     try {
+      const apiUrl = getApiUrl(messages);
       const response = await runAuthenticatedRequest(
-        `${API_URL}/users/${selectedUser.id}`,
+        `${apiUrl}/users/${selectedUser.id}`,
         {
           method: 'DELETE',
         },
@@ -1584,6 +1609,7 @@ export function DashboardApp() {
     setCampaignFeedback(null);
 
     try {
+      const apiUrl = getApiUrl(messages);
       const payload = {
         name: campaignForm.name.trim(),
         description: campaignForm.description.trim(),
@@ -1601,8 +1627,8 @@ export function DashboardApp() {
 
       const response = await runAuthenticatedRequest(
         editingCampaignId
-          ? `${API_URL}/campaigns/${editingCampaignId}`
-          : `${API_URL}/campaigns`,
+          ? `${apiUrl}/campaigns/${editingCampaignId}`
+          : `${apiUrl}/campaigns`,
         {
           method: editingCampaignId ? 'PATCH' : 'POST',
           headers: {
@@ -1650,8 +1676,9 @@ export function DashboardApp() {
     setCampaignFeedback(null);
 
     try {
+      const apiUrl = getApiUrl(messages);
       const response = await runAuthenticatedRequest(
-        `${API_URL}/campaigns/${campaignId}`,
+        `${apiUrl}/campaigns/${campaignId}`,
         {
           method: 'DELETE',
         },

@@ -291,6 +291,7 @@ Variáveis de ambiente:
 - `NODE_ENV=production`
 - `PORT=3000`
 - `NEXT_PUBLIC_API_URL=https://<url-da-api>/api`
+- como o frontend é buildado com `Dockerfile.web`, esse valor precisa estar disponível no build do deploy; após alterar a variável, faça novo deploy do serviço `web`
 
 ## Testes e qualidade
 
