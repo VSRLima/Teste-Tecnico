@@ -9,14 +9,24 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { type StringValue } from 'ms';
 import { JwtUser } from '../common/interfaces/jwt-user.interface';
+import { normalizeEmail } from '../common/utils/normalization';
 import { UserRecord, UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 
-type AuthTokens = {
+export type AuthenticatedUser = JwtUser;
+
+export type AuthTokens = {
   accessToken: string;
   refreshToken: string;
+};
+
+export type AuthResult = AuthTokens & {
+  user: AuthenticatedUser;
+};
+
+type RefreshTokenPayload = JwtUser & {
+  exp?: number;
 };
 
 const JWT_DURATION_PATTERN = /^(\d+(ms|s|m|h|d|w|y))$/;
@@ -27,6 +37,8 @@ function isJwtDuration(value: string): value is StringValue {
 
 @Injectable()
 export class AuthService {
+  private readonly revokedRefreshTokens = new Map<string, number>();
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
@@ -34,7 +46,8 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const existingUser = await this.usersService.findByEmail(dto.email);
+    const normalizedEmail = normalizeEmail(dto.email);
+    const existingUser = await this.usersService.findByEmail(normalizedEmail);
 
     if (existingUser) {
       throw new ConflictException('Email already in use');
@@ -44,7 +57,7 @@ export class AuthService {
 
     try {
       const user = await this.usersService.create({
-        email: dto.email,
+        email: normalizedEmail,
         name: dto.name,
         passwordHash,
         role: 'USER',
@@ -64,7 +77,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByEmail(dto.email);
+    const user = await this.usersService.findByEmail(normalizeEmail(dto.email));
     const passwordMatches = await bcrypt.compare(
       dto.password,
       user?.passwordHash ??
@@ -78,8 +91,8 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  async refresh(dto: RefreshTokenDto) {
-    const payload = await this.verifyRefreshToken(dto.refreshToken);
+  async refresh(refreshToken: string) {
+    const payload = await this.verifyRefreshToken(refreshToken);
     const user = await this.usersService.findById(payload.sub);
 
     if (!user) {
@@ -89,8 +102,40 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  private async buildAuthResponse(user: UserRecord) {
-    return this.issueTokens(user);
+  async revokeRefreshToken(refreshToken: string | null | undefined) {
+    if (!refreshToken) {
+      return;
+    }
+
+    try {
+      const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(
+        refreshToken,
+        {
+          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        },
+      );
+
+      this.pruneRevokedRefreshTokens();
+      this.revokedRefreshTokens.set(
+        refreshToken,
+        payload.exp ? payload.exp * 1_000 : Date.now(),
+      );
+    } catch {
+      // Logout should still succeed even when the token is already invalid.
+    }
+  }
+
+  private async buildAuthResponse(user: UserRecord): Promise<AuthResult> {
+    const tokens = await this.issueTokens(user);
+
+    return {
+      ...tokens,
+      user: {
+        name: user.name,
+        role: user.role,
+        sub: user.id,
+      },
+    };
   }
 
   private async issueTokens(user: UserRecord): Promise<AuthTokens> {
@@ -129,13 +174,36 @@ export class AuthService {
     return expiresIn;
   }
 
-  private async verifyRefreshToken(refreshToken: string): Promise<JwtUser> {
+  private async verifyRefreshToken(
+    refreshToken: string,
+  ): Promise<RefreshTokenPayload> {
+    this.pruneRevokedRefreshTokens();
+
+    const revokedUntil = this.revokedRefreshTokens.get(refreshToken);
+
+    if (revokedUntil && revokedUntil > Date.now()) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     try {
-      return await this.jwtService.verifyAsync<JwtUser>(refreshToken, {
-        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-      });
+      return await this.jwtService.verifyAsync<RefreshTokenPayload>(
+        refreshToken,
+        {
+          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+        },
+      );
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  private pruneRevokedRefreshTokens() {
+    const now = Date.now();
+
+    for (const [token, expiresAt] of this.revokedRefreshTokens.entries()) {
+      if (expiresAt <= now) {
+        this.revokedRefreshTokens.delete(token);
+      }
     }
   }
 }

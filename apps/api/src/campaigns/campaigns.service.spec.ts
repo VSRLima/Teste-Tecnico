@@ -205,6 +205,8 @@ describe('CampaignsService', () => {
       id: 'campaign-1',
       ownerId: 'manager-1',
       name: 'Campaign One',
+      startDate: new Date('2026-04-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-30T00:00:00.000Z'),
     });
     findFirstMock.mockResolvedValue(null);
     updateMock.mockResolvedValue({
@@ -244,6 +246,8 @@ describe('CampaignsService', () => {
       id: 'campaign-1',
       ownerId: 'manager-1',
       name: 'Campaign One',
+      startDate: new Date('2026-04-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-30T00:00:00.000Z'),
     });
     updateMock.mockResolvedValue({
       id: 'campaign-1',
@@ -291,6 +295,8 @@ describe('CampaignsService', () => {
       id: 'campaign-1',
       ownerId: 'manager-2',
       name: 'Campaign One',
+      startDate: new Date('2026-04-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-30T00:00:00.000Z'),
     });
 
     await expect(
@@ -392,11 +398,32 @@ describe('CampaignsService', () => {
     expect(createMock).not.toHaveBeenCalled();
   });
 
+  it('rejects campaign creation when endDate is earlier than startDate', async () => {
+    const dto = Object.assign(new CreateCampaignDto(), {
+      name: 'Campaign',
+      description: 'Description',
+      budget: 1200.5,
+      startDate: '2026-04-01T00:00:00.000Z',
+      endDate: '2026-03-31T00:00:00.000Z',
+    });
+
+    await expect(
+      service.create(dto, {
+        role: 'MANAGER',
+        sub: 'manager-1',
+      }),
+    ).rejects.toThrow('End date must be on or after the start date');
+
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
   it('rejects campaign update with a startDate earlier than today', async () => {
     findUniqueMock.mockResolvedValue({
       id: 'campaign-1',
       ownerId: 'manager-1',
       name: 'Campaign One',
+      startDate: new Date('2026-04-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-30T00:00:00.000Z'),
     });
 
     await expect(
@@ -420,6 +447,8 @@ describe('CampaignsService', () => {
       id: 'campaign-1',
       ownerId: 'manager-1',
       name: 'Campaign One',
+      startDate: new Date('2026-04-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-30T00:00:00.000Z'),
     });
 
     await expect(
@@ -434,6 +463,31 @@ describe('CampaignsService', () => {
         },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects campaign update when endDate becomes earlier than startDate', async () => {
+    findUniqueMock.mockResolvedValue({
+      id: 'campaign-1',
+      ownerId: 'manager-1',
+      name: 'Campaign One',
+      startDate: new Date('2026-04-10T00:00:00.000Z'),
+      endDate: new Date('2026-04-30T00:00:00.000Z'),
+    });
+
+    await expect(
+      service.update(
+        'campaign-1',
+        {
+          endDate: '2026-04-09T00:00:00.000Z',
+        },
+        {
+          role: 'MANAGER',
+          sub: 'manager-1',
+        },
+      ),
+    ).rejects.toThrow('End date must be on or after the start date');
 
     expect(updateMock).not.toHaveBeenCalled();
   });

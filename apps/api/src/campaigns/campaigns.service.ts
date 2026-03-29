@@ -26,6 +26,7 @@ export class CampaignsService {
 
   async create(dto: CreateCampaignDto, currentUser: CurrentUser) {
     this.assertDatesAreNotInPast(dto.startDate, dto.endDate);
+    this.assertDateRange(dto.startDate, dto.endDate);
     await this.ensureCampaignNameIsAvailable(dto.name, currentUser.sub);
 
     try {
@@ -115,10 +116,18 @@ export class CampaignsService {
 
   async update(id: string, dto: UpdateCampaignDto, currentUser: CurrentUser) {
     const currentCampaign = await this.findOne(id, currentUser);
+    const nextStartDate =
+      dto.startDate ?? currentCampaign.startDate.toISOString();
+    const nextEndDate =
+      dto.endDate === undefined
+        ? currentCampaign.endDate?.toISOString()
+        : (dto.endDate ?? undefined);
+
     this.assertDatesAreNotInPast(
       dto.startDate,
       dto.endDate === null ? undefined : dto.endDate,
     );
+    this.assertDateRange(nextStartDate, nextEndDate);
 
     if (dto.name && dto.name !== currentCampaign.name) {
       await this.ensureCampaignNameIsAvailable(
@@ -229,6 +238,18 @@ export class CampaignsService {
 
     if (endDate && this.getStartOfDay(endDate) < today) {
       throw new BadRequestException('End date cannot be earlier than today');
+    }
+  }
+
+  private assertDateRange(startDate?: string, endDate?: string) {
+    if (!startDate || !endDate) {
+      return;
+    }
+
+    if (this.getStartOfDay(endDate) < this.getStartOfDay(startDate)) {
+      throw new BadRequestException(
+        'End date must be on or after the start date',
+      );
     }
   }
 

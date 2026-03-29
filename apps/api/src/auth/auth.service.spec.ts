@@ -94,6 +94,11 @@ describe('AuthService', () => {
     expect(result).toEqual({
       accessToken: 'signed-access-token',
       refreshToken: 'signed-refresh-token',
+      user: {
+        name: 'Manager',
+        role: 'USER',
+        sub: 'user-1',
+      },
     });
     expect(signAsyncMock).toHaveBeenNthCalledWith(
       1,
@@ -171,6 +176,11 @@ describe('AuthService', () => {
 
     expect(result.accessToken).toBe('signed-access-token');
     expect(result.refreshToken).toBe('signed-refresh-token');
+    expect(result.user).toEqual({
+      name: 'Manager',
+      role: 'USER',
+      sub: 'user-1',
+    });
     expect(signAsyncMock).toHaveBeenCalledTimes(2);
     expect(signAsyncMock).toHaveBeenNthCalledWith(
       1,
@@ -218,14 +228,32 @@ describe('AuthService', () => {
     });
     findByIdMock.mockResolvedValue(user);
 
-    const result = await service.refresh({
-      refreshToken: 'valid.refresh.token',
-    });
+    const result = await service.refresh('valid.refresh.token');
 
     expect(result).toEqual({
       accessToken: 'signed-access-token',
       refreshToken: 'signed-refresh-token',
+      user: {
+        name: 'Manager',
+        role: 'USER',
+        sub: 'user-1',
+      },
     });
+  });
+
+  it('revokes a refresh token and rejects it afterwards', async () => {
+    verifyAsyncMock.mockResolvedValue({
+      exp: Math.floor(Date.now() / 1_000) + 3600,
+      role: 'USER',
+      sub: 'user-1',
+    });
+
+    await service.revokeRefreshToken('signed-refresh-token');
+
+    await expect(
+      service.refresh('signed-refresh-token'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(verifyAsyncMock).toHaveBeenCalledTimes(1);
   });
 
   it('rejects refresh tokens for users that no longer exist', async () => {
@@ -236,9 +264,7 @@ describe('AuthService', () => {
     findByIdMock.mockResolvedValue(null);
 
     await expect(
-      service.refresh({
-        refreshToken: 'missing-user.refresh.token',
-      }),
+      service.refresh('missing-user.refresh.token'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
@@ -246,9 +272,7 @@ describe('AuthService', () => {
     verifyAsyncMock.mockRejectedValue(new Error('invalid token'));
 
     await expect(
-      service.refresh({
-        refreshToken: 'invalid.refresh.token',
-      }),
+      service.refresh('invalid.refresh.token'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 

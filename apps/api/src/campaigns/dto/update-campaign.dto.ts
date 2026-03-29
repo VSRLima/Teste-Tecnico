@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsIn,
@@ -17,6 +18,9 @@ import {
 export class UpdateCampaignDto {
   @ApiPropertyOptional({ example: 'Campanha Black Friday' })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(3)
   name?: string;
@@ -25,6 +29,9 @@ export class UpdateCampaignDto {
     example: 'Campanha focada em acquisition para e-commerce.',
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   description?: string;
 

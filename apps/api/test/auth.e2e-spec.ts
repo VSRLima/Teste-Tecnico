@@ -6,30 +6,25 @@ describe('AuthModule (e2e)', () => {
   it('authenticates, refreshes and authorizes user creation flows', async () => {
     const setup = await createTestApp();
     const httpServer = setup.app.getHttpServer();
+    const managerAgent = request.agent(httpServer);
 
     await resetDatabase(setup.prisma);
     await seedUsers(setup.prisma);
 
-    const loginResponse = await request(httpServer)
-      .post('/api/auth/login')
-      .send({
-        email: seededUsers.manager.email,
-        password: seededUsers.manager.password,
-      });
+    const loginResponse = await managerAgent.post('/api/auth/login').send({
+      email: seededUsers.manager.email,
+      password: seededUsers.manager.password,
+    });
 
     expect(loginResponse.status).toBe(201);
     expect(loginResponse.body.accessToken).toEqual(expect.any(String));
-    expect(loginResponse.body.refreshToken).toEqual(expect.any(String));
 
-    const refreshResponse = await request(httpServer)
+    const refreshResponse = await managerAgent
       .post('/api/auth/refresh')
-      .send({
-        refreshToken: loginResponse.body.refreshToken,
-      });
+      .send({});
 
     expect(refreshResponse.status).toBe(201);
     expect(refreshResponse.body.accessToken).toEqual(expect.any(String));
-    expect(refreshResponse.body.refreshToken).toEqual(expect.any(String));
 
     const invalidLoginResponse = await request(httpServer)
       .post('/api/auth/login')

@@ -1,113 +1,58 @@
 'use client';
 
 import { useDeferredValue, useEffect, useEffectEvent, useState } from 'react';
+import { buildAuthenticatedUser } from '../lib/dashboard/auth';
+import {
+  getApiUrl,
+  parseApiError,
+  parseJsonResponse,
+} from '../lib/dashboard/api';
+import { copy } from '../lib/dashboard/copy';
+import {
+  LEGACY_TOKEN_STORAGE_KEY,
+  LEGACY_USER_STORAGE_KEY,
+  LOCALE_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+  campaignStatuses,
+  locales,
+  roles,
+  themes,
+} from '../lib/dashboard/constants';
+import {
+  formatCampaignStatus,
+  formatCurrency,
+  formatDate,
+  formatRole,
+  getCampaignCountLabel,
+  getTodayInputValue,
+  toDateInputValue,
+  toLocalDateISOString,
+} from '../lib/dashboard/formatters';
+import type {
+  ApiErrorResponse,
+  AuthResponse,
+  AuthSession,
+  AuthUser,
+  Campaign,
+  CampaignFormState,
+  CampaignStatus,
+  FeedbackState,
+  FormErrors,
+  Locale,
+  LoginFormState,
+  ManagedUser,
+  Role,
+  Theme,
+  UserManagementFormState,
+  UserProvisionFormState,
+} from '../lib/dashboard/types';
+import {
+  validateCampaignForm,
+  validateLoginForm,
+  validateManagedUserForm,
+  validateProvisionForm,
+} from '../lib/dashboard/validation';
 import styles from './dashboard-app.module.css';
-
-const LOCAL_API_URL = 'http://localhost:3333/api';
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ??
-  (process.env.NODE_ENV === 'development' ? LOCAL_API_URL : '');
-const SESSION_STORAGE_KEY = 'directcash.session';
-const LEGACY_TOKEN_STORAGE_KEY = 'directcash.token';
-const LEGACY_USER_STORAGE_KEY = 'directcash.user';
-const THEME_STORAGE_KEY = 'directcash.preferences.theme';
-const LOCALE_STORAGE_KEY = 'directcash.preferences.locale';
-const campaignStatuses = ['DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED'] as const;
-const roles = ['ADMIN', 'MANAGER', 'USER'] as const;
-const locales = ['pt-BR', 'en-US'] as const;
-const themes = ['dark', 'light'] as const;
-
-type CampaignStatus = (typeof campaignStatuses)[number];
-type Role = (typeof roles)[number];
-type Locale = (typeof locales)[number];
-type Theme = (typeof themes)[number];
-
-type AuthUser = {
-  name: string;
-  role: Role;
-  sub: string;
-};
-
-type AuthSession = {
-  accessToken: string;
-  refreshToken: string;
-};
-
-type PersistedSession = AuthSession;
-
-type AuthResponse = {
-  accessToken: string;
-  refreshToken: string;
-};
-
-type ApiErrorResponse = {
-  message?: string | string[];
-};
-
-type JwtPayload = {
-  name?: string;
-  role?: Role;
-  sub?: string;
-};
-
-type Campaign = {
-  id: string;
-  name: string;
-  description: string | null;
-  status: CampaignStatus;
-  budget: string;
-  startDate: string;
-  endDate: string | null;
-  owner: {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-  };
-};
-
-type ManagedUser = {
-  createdAt: string;
-  email: string;
-  id: string;
-  name: string;
-  role: Role;
-  updatedAt: string;
-};
-
-type LoginFormState = {
-  email: string;
-  password: string;
-};
-
-type UserProvisionFormState = {
-  email: string;
-  name: string;
-  password: string;
-  role: Role;
-};
-
-type UserManagementFormState = UserProvisionFormState;
-
-type CampaignFormState = {
-  budget: string;
-  description: string;
-  endDate: string;
-  name: string;
-  startDate: string;
-  status: CampaignStatus;
-};
-
-type FormErrors<T> = Partial<Record<keyof T, string>>;
-
-type FeedbackTone = 'success' | 'error' | 'info';
-
-type FeedbackState = {
-  message: string;
-  tone: FeedbackTone;
-};
-
-type Messages = (typeof copy)[Locale];
 
 const initialLoginForm: LoginFormState = {
   email: '',
@@ -136,606 +81,6 @@ const initialCampaignForm: CampaignFormState = {
   startDate: '',
   status: 'DRAFT',
 };
-
-const copy = {
-  'pt-BR': {
-    appName: 'DirectCash Studio',
-    heroTitle: 'Controle operacional de campanhas.',
-    heroDescription:
-      'Centralize a operação comercial em um painel com visão de carteira, responsáveis, orçamento e status sincronizados com a API.',
-    campaignsLoaded: 'campanhas carregadas',
-    currentProfile: 'perfil atual',
-    panelStatus: 'status do painel',
-    syncing: 'Sincronizando',
-    activeOperation: 'Operação ativa',
-    portfolioView: 'Visão da carteira',
-    updatingData: 'Atualizando dados',
-    consolidatedData: 'Dados consolidados',
-    authentication: 'Autenticação',
-    accessAndUsers: 'Acesso e usuários',
-    signInTitle: 'Entrar no sistema',
-    useExistingAccount: 'Use um usuário existente para acessar o painel.',
-    connectedAs: (name: string) => `Sessão conectada como ${name}.`,
-    newAccess: 'Novo acesso',
-    signOut: 'Encerrar sessão',
-    collapseAuth: 'Recolher autenticação',
-    expandAuth: 'Expandir autenticação',
-    restoringSession: 'Restaurando sessão...',
-    email: 'E-mail',
-    password: 'Senha',
-    loginEmailPlaceholder: 'admin@directcash.local',
-    loginPasswordPlaceholder: 'Digite sua senha',
-    signingIn: 'Entrando...',
-    signIn: 'Entrar',
-    accountAdminDescription:
-      'Gerencie acessos e acompanhe todas as campanhas da operação.',
-    accountManagerDescription:
-      'Acompanhe e opere as campanhas sob sua responsabilidade.',
-    campaigns: 'Campanhas',
-    operationalPanel: 'Painel operacional',
-    campaignPanelLead:
-      'Filtros e carteira ativa separados do fluxo de criação e edição.',
-    updatedData: 'Dados atualizados',
-    newCampaign: 'Nova campanha',
-    collapseCampaigns: 'Recolher campanhas',
-    expandCampaigns: 'Expandir campanhas',
-    loginToViewCampaigns:
-      'Faça login para visualizar, filtrar e operar as campanhas.',
-    search: 'Busca',
-    searchPlaceholder: 'Buscar por nome, responsável, e-mail ou descrição',
-    status: 'Status',
-    allStatuses: 'Todos os status',
-    campaignFound: 'campanha encontrada',
-    campaignsFound: 'campanhas encontradas',
-    globalCampaignView: 'Visão global de campanhas',
-    emptyCampaigns: 'Nenhuma campanha corresponde aos filtros aplicados.',
-    noDescription: 'Sem descrição cadastrada.',
-    owner: 'Responsável',
-    start: 'Início',
-    end: 'Fim',
-    edit: 'Editar',
-    delete: 'Excluir',
-    users: 'Usuários',
-    createNewAccess: 'Criar novo acesso',
-    manageUsers: 'Gerenciar usuários',
-    manageUsersTitle: 'Gerenciar acessos',
-    manageUsersLead:
-      'Veja todos os usuários internos e ajuste perfil, nome, e-mail ou senha quando necessário.',
-    loadingUsers: 'Carregando usuários...',
-    noUsers: 'Nenhum usuário cadastrado.',
-    editUser: 'Editar usuário',
-    editUserTitle: 'Editar usuário',
-    editUserLead: 'Atualize o perfil ou as credenciais do usuário selecionado.',
-    saveUserChanges: 'Salvar usuário',
-    userUpdated: 'Usuário atualizado com sucesso.',
-    userRemoved: 'Usuário removido com sucesso.',
-    loadUsersFailure: 'Não foi possível carregar os usuários.',
-    loadUsersFailed: 'Falha ao carregar usuários.',
-    saveUserFailure: 'Não foi possível salvar o usuário.',
-    saveUserFailed: 'Falha ao salvar usuário.',
-    removeUserFailure: 'Não foi possível remover o usuário.',
-    removeUserFailed: 'Falha ao remover usuário.',
-    reviewUserFields: 'Revise os dados do usuário antes de salvar.',
-    leavePasswordBlank: 'Deixe em branco para manter a senha atual.',
-    currentSessionUser:
-      'Sessão atual. Edição administrativa e exclusão ficam bloqueadas aqui.',
-    confirmDeleteUser: (name: string) =>
-      `Excluir o usuário ${name}? Esta ação não pode ser desfeita.`,
-    provisionLead: 'Cadastre perfis internos sem ocupar espaço fixo no painel.',
-    close: 'Fechar',
-    name: 'Nome',
-    role: 'Perfil',
-    fullNamePlaceholder: 'Nome completo',
-    newUserEmailPlaceholder: 'novo.usuario@directcash.local',
-    passwordExample: 'Ex.: Admin@123',
-    passwordHint: 'Use pelo menos 8 caracteres com letras, número e símbolo.',
-    creating: 'Criando...',
-    createUser: 'Criar usuário',
-    cancel: 'Cancelar',
-    editCampaignTitle: 'Editar campanha',
-    createCampaignTitle: 'Nova campanha',
-    editCampaignLead:
-      'Atualize dados operacionais sem misturar com os filtros do dashboard.',
-    createCampaignLead:
-      'Cadastre uma campanha em um fluxo dedicado e mais claro.',
-    campaignName: 'Nome da campanha',
-    campaignNamePlaceholder: 'Campanha de conversão',
-    budget: 'Budget',
-    startDate: 'Data inicial',
-    endDate: 'Data final',
-    endDateHint: 'Opcional para campanhas sem data final definida.',
-    description: 'Descrição',
-    descriptionPlaceholder: 'Contexto, objetivo e observações da campanha',
-    saving: 'Salvando...',
-    saveChanges: 'Salvar alterações',
-    createCampaign: 'Criar campanha',
-    dismissMessage: 'Fechar mensagem',
-    dismiss: 'Fechar',
-    sessionInvalid: 'Sessão inválida. Faça login novamente.',
-    invalidApiSession: 'Sessão inválida retornada pela API.',
-    sessionExpired: 'Sessão expirada.',
-    sessionExpiredLogin: 'Sessão expirada. Faça login novamente.',
-    apiNotConfigured:
-      'API não configurada neste deploy. Defina NEXT_PUBLIC_API_URL com a URL pública da API.',
-    authReviewFields: 'Revise os campos de acesso antes de continuar.',
-    authFailure: 'Falha na autenticação.',
-    authFailed: 'Falha ao autenticar.',
-    loginSuccess: 'Login realizado com sucesso.',
-    reviewProvisionFields: 'Revise os dados do novo acesso antes de salvar.',
-    provisionFailure: 'Não foi possível criar o usuário.',
-    provisionFailed: 'Falha ao criar usuário.',
-    createdUserMessage: (name: string, role: string) =>
-      `Usuário ${name} criado com perfil ${role}.`,
-    reviewCampaignFields: 'Revise os dados da campanha antes de salvar.',
-    saveCampaignFailure: 'Não foi possível salvar a campanha.',
-    saveCampaignFailed: 'Falha ao salvar campanha.',
-    campaignUpdated: 'Campanha atualizada com sucesso.',
-    campaignCreated: 'Campanha criada com sucesso.',
-    removeCampaignFailure: 'Não foi possível remover a campanha.',
-    removeCampaignFailed: 'Falha ao remover campanha.',
-    campaignRemoved: 'Campanha removida com sucesso.',
-    loadCampaignsFailure: 'Não foi possível carregar as campanhas.',
-    loadCampaignsFailed: 'Falha ao carregar campanhas.',
-    loggedOut: 'Sessão encerrada.',
-    enterAccessEmail: 'Informe o e-mail de acesso.',
-    typeValidEmail: 'Digite um e-mail válido.',
-    enterPassword: 'Informe a senha.',
-    minPassword: 'A senha deve ter pelo menos 8 caracteres.',
-    enterFullName: 'Informe o nome completo.',
-    minName: 'O nome precisa ter pelo menos 3 caracteres.',
-    enterNewAccessEmail: 'Informe o e-mail do novo acesso.',
-    definePassword: 'Defina uma senha para o usuário.',
-    strongPassword:
-      'Use letras maiúsculas, minúsculas, número e caractere especial.',
-    selectValidRole: 'Selecione um perfil válido.',
-    enterCampaignName: 'Informe o nome da campanha.',
-    enterCampaignBudget: 'Informe o budget da campanha.',
-    budgetPositive: 'Informe um budget maior que zero.',
-    enterStartDate: 'Informe a data inicial.',
-    startDatePast: 'A data inicial não pode ser anterior ao dia atual.',
-    endDatePast: 'A data final não pode ser anterior ao dia atual.',
-    endDateAfterStart:
-      'A data final deve ser igual ou posterior à data inicial.',
-    selectValidStatus: 'Selecione um status válido.',
-    noEndDate: 'Sem data final',
-    localeLabel: 'Idioma',
-    themeLabel: 'Tema',
-    languagePortuguese: 'PT',
-    languageEnglish: 'EN',
-    themeDark: 'Escuro',
-    themeLight: 'Claro',
-  },
-  'en-US': {
-    appName: 'DirectCash Studio',
-    heroTitle: 'Operational campaign control.',
-    heroDescription:
-      'Centralize the commercial operation in one dashboard with portfolio, owners, budget, and status synced with the API.',
-    campaignsLoaded: 'campaigns loaded',
-    currentProfile: 'current profile',
-    panelStatus: 'panel status',
-    syncing: 'Syncing',
-    activeOperation: 'Operation online',
-    portfolioView: 'Portfolio view',
-    updatingData: 'Refreshing data',
-    consolidatedData: 'Consolidated data',
-    authentication: 'Authentication',
-    accessAndUsers: 'Access and users',
-    signInTitle: 'Sign in',
-    useExistingAccount: 'Use an existing account to access the dashboard.',
-    connectedAs: (name: string) => `Signed in as ${name}.`,
-    newAccess: 'New access',
-    signOut: 'Sign out',
-    collapseAuth: 'Collapse authentication',
-    expandAuth: 'Expand authentication',
-    restoringSession: 'Restoring session...',
-    email: 'Email',
-    password: 'Password',
-    loginEmailPlaceholder: 'admin@directcash.local',
-    loginPasswordPlaceholder: 'Enter your password',
-    signingIn: 'Signing in...',
-    signIn: 'Sign in',
-    accountAdminDescription:
-      'Manage internal access and monitor every campaign in the operation.',
-    accountManagerDescription: 'Monitor and operate campaigns assigned to you.',
-    campaigns: 'Campaigns',
-    operationalPanel: 'Operations panel',
-    campaignPanelLead:
-      'Filters and active portfolio stay separate from the creation and editing flow.',
-    updatedData: 'Data updated',
-    newCampaign: 'New campaign',
-    collapseCampaigns: 'Collapse campaigns',
-    expandCampaigns: 'Expand campaigns',
-    loginToViewCampaigns: 'Sign in to view, filter, and operate campaigns.',
-    search: 'Search',
-    searchPlaceholder: 'Search by name, owner, email, or description',
-    status: 'Status',
-    allStatuses: 'All statuses',
-    campaignFound: 'campaign found',
-    campaignsFound: 'campaigns found',
-    globalCampaignView: 'Global campaign view',
-    emptyCampaigns: 'No campaign matches the active filters.',
-    noDescription: 'No description provided.',
-    owner: 'Owner',
-    start: 'Start',
-    end: 'End',
-    edit: 'Edit',
-    delete: 'Delete',
-    users: 'Users',
-    createNewAccess: 'Create new access',
-    manageUsers: 'Manage users',
-    manageUsersTitle: 'Manage access',
-    manageUsersLead:
-      'Review all internal users and update role, name, email, or password when needed.',
-    loadingUsers: 'Loading users...',
-    noUsers: 'No users found.',
-    editUser: 'Edit user',
-    editUserTitle: 'Edit user',
-    editUserLead:
-      'Update the selected user role or credentials from the admin workspace.',
-    saveUserChanges: 'Save user',
-    userUpdated: 'User updated successfully.',
-    userRemoved: 'User removed successfully.',
-    loadUsersFailure: 'Unable to load users.',
-    loadUsersFailed: 'Failed to load users.',
-    saveUserFailure: 'Unable to save the user.',
-    saveUserFailed: 'User save failed.',
-    removeUserFailure: 'Unable to remove the user.',
-    removeUserFailed: 'User removal failed.',
-    reviewUserFields: 'Review the user details before saving.',
-    leavePasswordBlank: 'Leave blank to keep the current password.',
-    currentSessionUser:
-      'Current session. Administrative edits and deletion are blocked here.',
-    confirmDeleteUser: (name: string) =>
-      `Delete user ${name}? This action cannot be undone.`,
-    provisionLead:
-      'Create internal profiles without occupying fixed dashboard space.',
-    close: 'Close',
-    name: 'Name',
-    role: 'Role',
-    fullNamePlaceholder: 'Full name',
-    newUserEmailPlaceholder: 'new.user@directcash.local',
-    passwordExample: 'Ex.: Admin@123',
-    passwordHint:
-      'Use at least 8 characters with letters, numbers, and symbols.',
-    creating: 'Creating...',
-    createUser: 'Create user',
-    cancel: 'Cancel',
-    editCampaignTitle: 'Edit campaign',
-    createCampaignTitle: 'New campaign',
-    editCampaignLead:
-      'Update operational data without mixing it with dashboard filters.',
-    createCampaignLead: 'Register a campaign in a dedicated and clearer flow.',
-    campaignName: 'Campaign name',
-    campaignNamePlaceholder: 'Conversion campaign',
-    budget: 'Budget',
-    startDate: 'Start date',
-    endDate: 'End date',
-    endDateHint: 'Optional for campaigns without a defined end date.',
-    description: 'Description',
-    descriptionPlaceholder: 'Context, objective, and campaign notes',
-    saving: 'Saving...',
-    saveChanges: 'Save changes',
-    createCampaign: 'Create campaign',
-    dismissMessage: 'Dismiss message',
-    dismiss: 'Close',
-    sessionInvalid: 'Invalid session. Sign in again.',
-    invalidApiSession: 'Invalid session returned by the API.',
-    sessionExpired: 'Session expired.',
-    sessionExpiredLogin: 'Session expired. Sign in again.',
-    apiNotConfigured:
-      'API is not configured for this deployment. Set NEXT_PUBLIC_API_URL to the public API URL.',
-    authReviewFields: 'Review the access fields before continuing.',
-    authFailure: 'Authentication failed.',
-    authFailed: 'Unable to authenticate.',
-    loginSuccess: 'Signed in successfully.',
-    reviewProvisionFields: 'Review the new access data before saving.',
-    provisionFailure: 'Unable to create the user.',
-    provisionFailed: 'User creation failed.',
-    createdUserMessage: (name: string, role: string) =>
-      `User ${name} created with ${role} access.`,
-    reviewCampaignFields: 'Review the campaign data before saving.',
-    saveCampaignFailure: 'Unable to save the campaign.',
-    saveCampaignFailed: 'Campaign save failed.',
-    campaignUpdated: 'Campaign updated successfully.',
-    campaignCreated: 'Campaign created successfully.',
-    removeCampaignFailure: 'Unable to remove the campaign.',
-    removeCampaignFailed: 'Campaign removal failed.',
-    campaignRemoved: 'Campaign removed successfully.',
-    loadCampaignsFailure: 'Unable to load campaigns.',
-    loadCampaignsFailed: 'Failed to load campaigns.',
-    loggedOut: 'Session ended.',
-    enterAccessEmail: 'Enter the access email.',
-    typeValidEmail: 'Enter a valid email.',
-    enterPassword: 'Enter the password.',
-    minPassword: 'Password must contain at least 8 characters.',
-    enterFullName: 'Enter the full name.',
-    minName: 'Name must contain at least 3 characters.',
-    enterNewAccessEmail: 'Enter the new access email.',
-    definePassword: 'Define a password for this user.',
-    strongPassword:
-      'Use uppercase, lowercase, a number, and a special character.',
-    selectValidRole: 'Select a valid role.',
-    enterCampaignName: 'Enter the campaign name.',
-    enterCampaignBudget: 'Enter the campaign budget.',
-    budgetPositive: 'Enter a budget greater than zero.',
-    enterStartDate: 'Enter the start date.',
-    startDatePast: 'Start date cannot be earlier than today.',
-    endDatePast: 'End date cannot be earlier than today.',
-    endDateAfterStart: 'End date must be on or after the start date.',
-    selectValidStatus: 'Select a valid status.',
-    noEndDate: 'No end date',
-    localeLabel: 'Language',
-    themeLabel: 'Theme',
-    languagePortuguese: 'PT',
-    languageEnglish: 'EN',
-    themeDark: 'Dark',
-    themeLight: 'Light',
-  },
-} as const;
-
-function formatCurrency(locale: Locale, value: number | string) {
-  const numericValue = Number(value);
-
-  if (Number.isNaN(numericValue)) {
-    return locale === 'pt-BR' ? 'R$ 0,00' : 'R$0.00';
-  }
-
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(numericValue);
-}
-
-function formatDate(locale: Locale, value: string | null) {
-  if (!value) {
-    return copy[locale].noEndDate;
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-  }).format(new Date(value));
-}
-
-function formatRole(locale: Locale, role: Role) {
-  if (locale === 'en-US') {
-    switch (role) {
-      case 'ADMIN':
-        return 'Administrator';
-      case 'MANAGER':
-        return 'Manager';
-      case 'USER':
-      default:
-        return 'User';
-    }
-  }
-
-  switch (role) {
-    case 'ADMIN':
-      return 'Administrador';
-    case 'MANAGER':
-      return 'Gestor';
-    case 'USER':
-    default:
-      return 'Usuário';
-  }
-}
-
-function formatCampaignStatus(locale: Locale, status: CampaignStatus) {
-  switch (status) {
-    case 'ACTIVE':
-      return locale === 'pt-BR' ? 'Ativa' : 'Active';
-    case 'PAUSED':
-      return locale === 'pt-BR' ? 'Pausada' : 'Paused';
-    case 'COMPLETED':
-      return locale === 'pt-BR' ? 'Concluída' : 'Completed';
-    case 'DRAFT':
-    default:
-      return locale === 'pt-BR' ? 'Rascunho' : 'Draft';
-  }
-}
-
-function parseApiError(data: unknown, fallback: string) {
-  if (!data || typeof data !== 'object' || !('message' in data)) {
-    return fallback;
-  }
-
-  const message = (data as { message?: unknown }).message;
-
-  if (Array.isArray(message)) {
-    const normalizedMessage = message
-      .filter((item): item is string => typeof item === 'string')
-      .join(' ');
-
-    return normalizedMessage || fallback;
-  }
-
-  return typeof message === 'string' && message.length > 0 ? message : fallback;
-}
-
-function decodeJwtPayload(token: string): JwtPayload | null {
-  try {
-    const payloadSegment = token.split('.')[1];
-
-    if (!payloadSegment) {
-      return null;
-    }
-
-    const normalizedPayload = payloadSegment
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-    const paddedPayload = normalizedPayload.padEnd(
-      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
-      '=',
-    );
-
-    return JSON.parse(atob(paddedPayload)) as JwtPayload;
-  } catch {
-    return null;
-  }
-}
-
-function buildAuthenticatedUser(accessToken: string, locale: Locale): AuthUser {
-  const payload = decodeJwtPayload(accessToken);
-
-  if (!payload?.sub || !payload?.role || !payload?.name) {
-    throw new Error(copy[locale].invalidApiSession);
-  }
-
-  return {
-    name: payload.name,
-    role: payload.role,
-    sub: payload.sub,
-  };
-}
-
-function toDateInputValue(value: string | null) {
-  if (!value) {
-    return '';
-  }
-
-  return new Date(value).toISOString().slice(0, 10);
-}
-
-function getTodayInputValue() {
-  const now = new Date();
-  const timezoneOffsetInMs = now.getTimezoneOffset() * 60_000;
-
-  return new Date(now.getTime() - timezoneOffsetInMs)
-    .toISOString()
-    .slice(0, 10);
-}
-
-function toLocalDateISOString(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-
-  return new Date(year, month - 1, day).toISOString();
-}
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function validateLoginForm(locale: Locale, form: LoginFormState) {
-  const errors: FormErrors<LoginFormState> = {};
-  const messages = copy[locale];
-
-  if (!form.email.trim()) {
-    errors.email = messages.enterAccessEmail;
-  } else if (!isValidEmail(form.email)) {
-    errors.email = messages.typeValidEmail;
-  }
-
-  if (!form.password) {
-    errors.password = messages.enterPassword;
-  } else if (form.password.length < 8) {
-    errors.password = messages.minPassword;
-  }
-
-  return errors;
-}
-
-function validateProvisionForm(locale: Locale, form: UserProvisionFormState) {
-  return validateManagedUserForm(locale, form, true);
-}
-
-function validateManagedUserForm(
-  locale: Locale,
-  form: UserManagementFormState,
-  requirePassword: boolean,
-) {
-  const errors: FormErrors<UserManagementFormState> = {};
-  const messages = copy[locale];
-
-  if (!form.name.trim()) {
-    errors.name = messages.enterFullName;
-  } else if (form.name.trim().length < 3) {
-    errors.name = messages.minName;
-  }
-
-  if (!form.email.trim()) {
-    errors.email = messages.enterNewAccessEmail;
-  } else if (!isValidEmail(form.email)) {
-    errors.email = messages.typeValidEmail;
-  }
-
-  if (requirePassword && !form.password) {
-    errors.password = messages.definePassword;
-  } else if (form.password && form.password.length < 8) {
-    errors.password = messages.minPassword;
-  } else if (
-    form.password &&
-    !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}/.test(
-      form.password,
-    )
-  ) {
-    errors.password = messages.strongPassword;
-  }
-
-  if (!roles.includes(form.role)) {
-    errors.role = messages.selectValidRole;
-  }
-
-  return errors;
-}
-
-function validateCampaignForm(
-  locale: Locale,
-  form: CampaignFormState,
-  editingCampaignId?: string | null,
-) {
-  const errors: FormErrors<CampaignFormState> = {};
-  const budgetValue = Number(form.budget);
-  const today = getTodayInputValue();
-  const messages = copy[locale];
-
-  if (!form.name.trim()) {
-    errors.name = messages.enterCampaignName;
-  } else if (form.name.trim().length < 3) {
-    errors.name = messages.minName;
-  }
-
-  if (!form.budget.trim()) {
-    errors.budget = messages.enterCampaignBudget;
-  } else if (!Number.isFinite(budgetValue) || budgetValue <= 0) {
-    errors.budget = messages.budgetPositive;
-  }
-
-  if (!form.startDate) {
-    errors.startDate = messages.enterStartDate;
-  } else if (!editingCampaignId && form.startDate < today) {
-    errors.startDate = messages.startDatePast;
-  }
-
-  if (form.endDate) {
-    if (form.endDate < today) {
-      errors.endDate = messages.endDatePast;
-    } else if (form.startDate && form.endDate < form.startDate) {
-      errors.endDate = messages.endDateAfterStart;
-    }
-  }
-
-  if (!campaignStatuses.includes(form.status)) {
-    errors.status = messages.selectValidStatus;
-  }
-
-  return errors;
-}
-
-async function parseJsonResponse<T>(response: Response) {
-  if (!response.headers.get('content-type')?.includes('application/json')) {
-    return null;
-  }
-
-  return (await response.json()) as T;
-}
-
-function getApiUrl(messages: Messages) {
-  if (!API_URL) {
-    throw new Error(messages.apiNotConfigured);
-  }
-
-  return API_URL;
-}
 
 function getFeedbackClassName(feedback: FeedbackState | null) {
   if (!feedback) {
@@ -787,10 +132,6 @@ function renderDismissibleFeedback(
       </button>
     </div>
   );
-}
-
-function getCampaignCountLabel(locale: Locale, count: number) {
-  return count === 1 ? copy[locale].campaignFound : copy[locale].campaignsFound;
 }
 
 function CollapseIcon({ expanded }: { expanded: boolean }) {
@@ -914,8 +255,7 @@ export function DashboardApp() {
     status,
   }));
 
-  function persistSession(nextSession: AuthSession) {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
+  function clearLegacySessionStorage() {
     localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
     localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
   }
@@ -962,9 +302,7 @@ export function DashboardApp() {
   }
 
   function clearSession() {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-    localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
-    localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
+    clearLegacySessionStorage();
     setSession(null);
     setUser(null);
     setCampaigns([]);
@@ -991,13 +329,11 @@ export function DashboardApp() {
   function applyAuthSession(response: AuthResponse) {
     const nextSession: AuthSession = {
       accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
     };
-    const nextUser = buildAuthenticatedUser(response.accessToken, locale);
+    const nextUser = buildAuthenticatedUser(response.user, locale);
 
     setSession(nextSession);
     setUser(nextUser);
-    persistSession(nextSession);
 
     return {
       session: nextSession,
@@ -1005,14 +341,11 @@ export function DashboardApp() {
     };
   }
 
-  async function refreshSessionWithToken(refreshToken: string) {
+  async function refreshSession() {
     const apiUrl = getApiUrl(messages);
     const response = await fetch(`${apiUrl}/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include',
     });
     const data = await parseJsonResponse<AuthResponse | ApiErrorResponse>(
       response,
@@ -1023,6 +356,19 @@ export function DashboardApp() {
     }
 
     return applyAuthSession(data);
+  }
+
+  async function logoutSession() {
+    try {
+      const apiUrl = getApiUrl(messages);
+
+      await fetch(`${apiUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // The client state is the source of truth for the current screen.
+    }
   }
 
   async function runAuthenticatedRequest(
@@ -1042,6 +388,7 @@ export function DashboardApp() {
 
       return fetch(input, {
         ...init,
+        credentials: 'include',
         headers,
       });
     };
@@ -1052,9 +399,7 @@ export function DashboardApp() {
       return response;
     }
 
-    const refreshed = await refreshSessionWithToken(
-      currentSession.refreshToken,
-    );
+    const refreshed = await refreshSession();
 
     const retriedResponse = await execute(refreshed.session.accessToken);
 
@@ -1145,26 +490,10 @@ export function DashboardApp() {
   }
 
   const restoreSession = useEffectEvent(async () => {
-    const storedSession = localStorage.getItem(SESSION_STORAGE_KEY);
-
-    if (!storedSession) {
-      localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
-      localStorage.removeItem(LEGACY_USER_STORAGE_KEY);
-      setIsSessionLoading(false);
-      return;
-    }
+    clearLegacySessionStorage();
 
     try {
-      const parsedSession = JSON.parse(storedSession) as PersistedSession;
-
-      if (!parsedSession.refreshToken || !parsedSession.accessToken) {
-        throw new Error(messages.sessionInvalid);
-      }
-
-      const refreshed = await refreshSessionWithToken(
-        parsedSession.refreshToken,
-      );
-
+      const refreshed = await refreshSession();
       await loadCampaigns(refreshed.session);
     } catch (error) {
       clearSession();
@@ -1321,6 +650,7 @@ export function DashboardApp() {
       const apiUrl = getApiUrl(messages);
       const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -1866,6 +1196,7 @@ export function DashboardApp() {
                   aria-label={messages.signOut}
                   className={styles.iconButton}
                   onClick={() => {
+                    void logoutSession();
                     clearSession();
                     setAuthFeedback({
                       message: messages.loggedOut,

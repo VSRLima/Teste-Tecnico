@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsIn,
@@ -13,6 +14,9 @@ import type { CampaignStatus } from '../../common/constants/campaign-statuses';
 
 export class CreateCampaignDto {
   @ApiProperty({ example: 'Campanha Black Friday' })
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(3)
   name: string;
@@ -21,6 +25,9 @@ export class CreateCampaignDto {
     example: 'Campanha focada em acquisition para e-commerce.',
   })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   description?: string;
 
