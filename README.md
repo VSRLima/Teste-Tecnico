@@ -223,6 +223,7 @@ Estratégia recomendada: criar 5 serviços.
 Configuração:
 
 - Dockerfile path: `Dockerfile.api`
+- no Railway, defina `RAILWAY_DOCKERFILE_PATH=Dockerfile.api` ou configure o Custom Dockerfile Path no serviço; `Dockerfile.api` não é autodetectado por não se chamar exatamente `Dockerfile`
 - Port: `3333`
 
 Variáveis de ambiente:
@@ -269,6 +270,7 @@ npm run db:seed --workspace @directcash/api
 Configuração:
 
 - Dockerfile path: `Dockerfile.api`
+- no Railway, defina `RAILWAY_DOCKERFILE_PATH=Dockerfile.api` ou configure o Custom Dockerfile Path no serviço
 - Start command: `node apps/api/dist/src/worker.js`
 
 Variáveis de ambiente:
@@ -281,6 +283,7 @@ Variáveis de ambiente:
 Configuração:
 
 - Dockerfile path: `Dockerfile.web`
+- no Railway, defina `RAILWAY_DOCKERFILE_PATH=Dockerfile.web` ou configure o Custom Dockerfile Path no serviço
 - Port: `3000`
 
 Variáveis de ambiente:
