@@ -259,10 +259,10 @@ Configure no Railway um Pre-Deploy Command para aplicar migrations:
 npm run db:migrate:deploy --workspace @directcash/api
 ```
 
-Opcionalmente, rode seed:
+Opcionalmente, rode seed. O worker depende das tabelas já criadas, então publique o worker apenas depois que as migrations tiverem sido aplicadas. O seed em produção exige opt-in explícito:
 
 ```bash
-npm run db:seed --workspace @directcash/api
+SEED_ADMIN_PASSWORD=<senha-admin> SEED_MANAGER_PASSWORD=<senha-manager> npm run db:seed:prod --workspace @directcash/api
 ```
 
 ### Serviço `worker`

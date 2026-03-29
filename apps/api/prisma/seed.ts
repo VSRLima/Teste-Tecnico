@@ -3,6 +3,7 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 const isProduction = process.env.NODE_ENV === 'production';
+const allowProductionSeed = process.env.ALLOW_PRODUCTION_SEED === 'true';
 
 function getSeedPassword(
   environmentVariable: 'SEED_ADMIN_PASSWORD' | 'SEED_MANAGER_PASSWORD',
@@ -99,7 +100,7 @@ async function main() {
   console.log('Manager: manager@directcash.local');
 }
 
-if (isProduction) {
+if (isProduction && !allowProductionSeed) {
   console.error('Refusing to run seed in production.');
   process.exit(1);
 }

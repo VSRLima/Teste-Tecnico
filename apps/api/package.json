@@ -14,6 +14,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "ts-node --project tsconfig.json prisma/seed.ts",
+    "db:seed:prod": "ALLOW_PRODUCTION_SEED=true ts-node --project tsconfig.json prisma/seed.ts",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
