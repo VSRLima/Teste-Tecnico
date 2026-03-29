@@ -1,13 +1,16 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
+  IsIn,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { roles, type Role } from '../../common/constants/roles';
 
-export class RegisterDto {
+export class CreateUserDto {
   @ApiProperty({ example: 'Vinicius Reis' })
   @IsString()
   @MinLength(3)
@@ -27,4 +30,9 @@ export class RegisterDto {
       'password must include uppercase, lowercase, number, and special character',
   })
   password: string;
+
+  @ApiPropertyOptional({ enum: roles, example: 'USER', default: 'USER' })
+  @IsOptional()
+  @IsIn(roles)
+  role?: Role;
 }

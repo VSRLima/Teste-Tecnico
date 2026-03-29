@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { assertStrongSecretsOutsideTests } from './config/runtime-security';
 import { WorkerModule } from './worker.module';
 
 async function bootstrap() {
@@ -9,6 +10,7 @@ async function bootstrap() {
     | undefined;
 
   try {
+    assertStrongSecretsOutsideTests(process.env);
     app = await NestFactory.createApplicationContext(WorkerModule);
     app.enableShutdownHooks();
     logger.log('Campaign worker is running');

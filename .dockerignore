@@ -5,7 +5,9 @@ dist
 coverage
 .turbo
 *.log
-.env
+.env*
+!.env.example
+!apps/api/.env.example
 apps/api/node_modules
 apps/api/dist
 apps/web/node_modules

@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class HealthService {
+  private readonly logger = new Logger(HealthService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   getHealth() {
@@ -15,12 +17,26 @@ export class HealthService {
   }
 
   async getReadiness() {
-    await this.prisma.$queryRaw`SELECT 1`;
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
 
-    return {
-      status: 'ready',
-      database: 'ok',
-      timestamp: new Date().toISOString(),
-    };
+      return {
+        status: 'ready',
+        database: 'ok',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error(
+        'Database readiness check failed',
+        error instanceof Error ? error.stack : String(error),
+      );
+
+      return {
+        status: 'unready',
+        database: 'error',
+        error: 'Database not ready',
+        timestamp: new Date().toISOString(),
+      };
+    }
   }
 }

@@ -57,12 +57,39 @@ export class CampaignExpirationConsumer extends WorkerHost {
       return;
     }
 
-    await this.prisma.campaign.update({
-      where: { id: campaign.id },
+    const endDate = new Date(job.data.endDate);
+    const updateResult = await this.prisma.campaign.updateMany({
+      where: {
+        id: campaign.id,
+        endDate,
+        status: {
+          not: PrismaCampaignStatus.COMPLETED,
+        },
+      },
       data: {
         status: PrismaCampaignStatus.COMPLETED,
       },
     });
+
+    if (updateResult.count === 0) {
+      const latestCampaign = await this.prisma.campaign.findUnique({
+        where: { id: campaign.id },
+        select: {
+          id: true,
+          endDate: true,
+          status: true,
+        },
+      });
+
+      if (latestCampaign) {
+        await this.schedulerService.refreshCampaignSchedule(latestCampaign);
+      }
+
+      this.logger.warn(
+        `Skipped completing campaign ${campaign.id} because its schedule changed before the atomic update`,
+      );
+      return;
+    }
 
     this.logger.log(`Campaign ${campaign.id} marked as completed`);
   }

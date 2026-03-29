@@ -5,13 +5,13 @@ import { CampaignExpirationConsumer } from './campaign-expiration.consumer';
 
 describe('CampaignExpirationConsumer', () => {
   const findUniqueMock = jest.fn();
-  const updateMock = jest.fn();
+  const updateManyMock = jest.fn();
   const refreshCampaignScheduleMock = jest.fn();
 
   const prisma = {
     campaign: {
       findUnique: findUniqueMock,
-      update: updateMock,
+      updateMany: updateManyMock,
     },
   } as unknown as PrismaService;
 
@@ -49,7 +49,7 @@ describe('CampaignExpirationConsumer', () => {
       },
     } as never);
 
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(updateManyMock).not.toHaveBeenCalled();
   });
 
   it('reschedules jobs when campaign endDate changed or is still in the future', async () => {
@@ -71,7 +71,7 @@ describe('CampaignExpirationConsumer', () => {
     } as never);
 
     expect(refreshCampaignScheduleMock).toHaveBeenCalledWith(campaign);
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(updateManyMock).not.toHaveBeenCalled();
   });
 
   it('marks campaigns as completed when the scheduled expiration is due', async () => {
@@ -82,6 +82,7 @@ describe('CampaignExpirationConsumer', () => {
       endDate: pastDate,
       status: PrismaCampaignStatus.ACTIVE,
     });
+    updateManyMock.mockResolvedValue({ count: 1 });
 
     await consumer.process({
       name: 'expire-campaign',
@@ -91,8 +92,14 @@ describe('CampaignExpirationConsumer', () => {
       },
     } as never);
 
-    expect(updateMock).toHaveBeenCalledWith({
-      where: { id: 'campaign-1' },
+    expect(updateManyMock).toHaveBeenCalledWith({
+      where: {
+        id: 'campaign-1',
+        endDate: pastDate,
+        status: {
+          not: PrismaCampaignStatus.COMPLETED,
+        },
+      },
       data: {
         status: PrismaCampaignStatus.COMPLETED,
       },
@@ -115,6 +122,6 @@ describe('CampaignExpirationConsumer', () => {
     } as never);
 
     expect(refreshCampaignScheduleMock).not.toHaveBeenCalled();
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(updateManyMock).not.toHaveBeenCalled();
   });
 });

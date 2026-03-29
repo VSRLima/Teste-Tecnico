@@ -13,9 +13,19 @@ for (const [command, args] of steps) {
     cwd: process.cwd(),
     stdio: 'inherit',
     env: process.env,
+    shell: true,
   });
+
+  if (result.error) {
+    console.error(`Failed to spawn ${command}: ${result.error.message}`);
+    process.exit(1);
+  }
 
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
+  }
+
+  if (result.signal) {
+    process.exit(1);
   }
 }

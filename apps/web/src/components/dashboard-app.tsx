@@ -10,7 +10,7 @@ const LEGACY_USER_STORAGE_KEY = 'directcash.user';
 const THEME_STORAGE_KEY = 'directcash.preferences.theme';
 const LOCALE_STORAGE_KEY = 'directcash.preferences.locale';
 const campaignStatuses = ['DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED'] as const;
-const roles = ['ADMIN', 'MANAGER'] as const;
+const roles = ['ADMIN', 'MANAGER', 'USER'] as const;
 const locales = ['pt-BR', 'en-US'] as const;
 const themes = ['dark', 'light'] as const;
 
@@ -63,6 +63,15 @@ type Campaign = {
   };
 };
 
+type ManagedUser = {
+  createdAt: string;
+  email: string;
+  id: string;
+  name: string;
+  role: Role;
+  updatedAt: string;
+};
+
 type LoginFormState = {
   email: string;
   password: string;
@@ -74,6 +83,8 @@ type UserProvisionFormState = {
   password: string;
   role: Role;
 };
+
+type UserManagementFormState = UserProvisionFormState;
 
 type CampaignFormState = {
   budget: string;
@@ -102,7 +113,14 @@ const initialUserProvisionForm: UserProvisionFormState = {
   email: '',
   name: '',
   password: '',
-  role: 'MANAGER',
+  role: 'USER',
+};
+
+const initialUserManagementForm: UserManagementFormState = {
+  email: '',
+  name: '',
+  password: '',
+  role: 'USER',
 };
 
 const initialCampaignForm: CampaignFormState = {
@@ -174,6 +192,30 @@ const copy = {
     delete: 'Excluir',
     users: 'Usuários',
     createNewAccess: 'Criar novo acesso',
+    manageUsers: 'Gerenciar usuários',
+    manageUsersTitle: 'Gerenciar acessos',
+    manageUsersLead:
+      'Veja todos os usuários internos e ajuste perfil, nome, e-mail ou senha quando necessário.',
+    loadingUsers: 'Carregando usuários...',
+    noUsers: 'Nenhum usuário cadastrado.',
+    editUser: 'Editar usuário',
+    editUserTitle: 'Editar usuário',
+    editUserLead: 'Atualize o perfil ou as credenciais do usuário selecionado.',
+    saveUserChanges: 'Salvar usuário',
+    userUpdated: 'Usuário atualizado com sucesso.',
+    userRemoved: 'Usuário removido com sucesso.',
+    loadUsersFailure: 'Não foi possível carregar os usuários.',
+    loadUsersFailed: 'Falha ao carregar usuários.',
+    saveUserFailure: 'Não foi possível salvar o usuário.',
+    saveUserFailed: 'Falha ao salvar usuário.',
+    removeUserFailure: 'Não foi possível remover o usuário.',
+    removeUserFailed: 'Falha ao remover usuário.',
+    reviewUserFields: 'Revise os dados do usuário antes de salvar.',
+    leavePasswordBlank: 'Deixe em branco para manter a senha atual.',
+    currentSessionUser:
+      'Sessão atual. Edição administrativa e exclusão ficam bloqueadas aqui.',
+    confirmDeleteUser: (name: string) =>
+      `Excluir o usuário ${name}? Esta ação não pode ser desfeita.`,
     provisionLead: 'Cadastre perfis internos sem ocupar espaço fixo no painel.',
     close: 'Fechar',
     name: 'Nome',
@@ -313,6 +355,31 @@ const copy = {
     delete: 'Delete',
     users: 'Users',
     createNewAccess: 'Create new access',
+    manageUsers: 'Manage users',
+    manageUsersTitle: 'Manage access',
+    manageUsersLead:
+      'Review all internal users and update role, name, email, or password when needed.',
+    loadingUsers: 'Loading users...',
+    noUsers: 'No users found.',
+    editUser: 'Edit user',
+    editUserTitle: 'Edit user',
+    editUserLead:
+      'Update the selected user role or credentials from the admin workspace.',
+    saveUserChanges: 'Save user',
+    userUpdated: 'User updated successfully.',
+    userRemoved: 'User removed successfully.',
+    loadUsersFailure: 'Unable to load users.',
+    loadUsersFailed: 'Failed to load users.',
+    saveUserFailure: 'Unable to save the user.',
+    saveUserFailed: 'User save failed.',
+    removeUserFailure: 'Unable to remove the user.',
+    removeUserFailed: 'User removal failed.',
+    reviewUserFields: 'Review the user details before saving.',
+    leavePasswordBlank: 'Leave blank to keep the current password.',
+    currentSessionUser:
+      'Current session. Administrative edits and deletion are blocked here.',
+    confirmDeleteUser: (name: string) =>
+      `Delete user ${name}? This action cannot be undone.`,
     provisionLead:
       'Create internal profiles without occupying fixed dashboard space.',
     close: 'Close',
@@ -422,10 +489,26 @@ function formatDate(locale: Locale, value: string | null) {
 
 function formatRole(locale: Locale, role: Role) {
   if (locale === 'en-US') {
-    return role === 'ADMIN' ? 'Administrator' : 'Manager';
+    switch (role) {
+      case 'ADMIN':
+        return 'Administrator';
+      case 'MANAGER':
+        return 'Manager';
+      case 'USER':
+      default:
+        return 'User';
+    }
   }
 
-  return role === 'ADMIN' ? 'Administrador' : 'Gestor';
+  switch (role) {
+    case 'ADMIN':
+      return 'Administrador';
+    case 'MANAGER':
+      return 'Gestor';
+    case 'USER':
+    default:
+      return 'Usuário';
+  }
 }
 
 function formatCampaignStatus(locale: Locale, status: CampaignStatus) {
@@ -513,6 +596,12 @@ function getTodayInputValue() {
     .slice(0, 10);
 }
 
+function toLocalDateISOString(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+
+  return new Date(year, month - 1, day).toISOString();
+}
+
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -537,7 +626,15 @@ function validateLoginForm(locale: Locale, form: LoginFormState) {
 }
 
 function validateProvisionForm(locale: Locale, form: UserProvisionFormState) {
-  const errors: FormErrors<UserProvisionFormState> = {};
+  return validateManagedUserForm(locale, form, true);
+}
+
+function validateManagedUserForm(
+  locale: Locale,
+  form: UserManagementFormState,
+  requirePassword: boolean,
+) {
+  const errors: FormErrors<UserManagementFormState> = {};
   const messages = copy[locale];
 
   if (!form.name.trim()) {
@@ -552,11 +649,12 @@ function validateProvisionForm(locale: Locale, form: UserProvisionFormState) {
     errors.email = messages.typeValidEmail;
   }
 
-  if (!form.password) {
+  if (requirePassword && !form.password) {
     errors.password = messages.definePassword;
-  } else if (form.password.length < 8) {
+  } else if (form.password && form.password.length < 8) {
     errors.password = messages.minPassword;
   } else if (
+    form.password &&
     !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}/.test(
       form.password,
     )
@@ -571,7 +669,11 @@ function validateProvisionForm(locale: Locale, form: UserProvisionFormState) {
   return errors;
 }
 
-function validateCampaignForm(locale: Locale, form: CampaignFormState) {
+function validateCampaignForm(
+  locale: Locale,
+  form: CampaignFormState,
+  editingCampaignId?: string | null,
+) {
   const errors: FormErrors<CampaignFormState> = {};
   const budgetValue = Number(form.budget);
   const today = getTodayInputValue();
@@ -591,7 +693,7 @@ function validateCampaignForm(locale: Locale, form: CampaignFormState) {
 
   if (!form.startDate) {
     errors.startDate = messages.enterStartDate;
-  } else if (form.startDate < today) {
+  } else if (!editingCampaignId && form.startDate < today) {
     errors.startDate = messages.startDatePast;
   }
 
@@ -748,10 +850,13 @@ export function DashboardApp() {
   const [isCampaignLoading, setIsCampaignLoading] = useState(false);
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
   const [isCampaignPanelOpen, setIsCampaignPanelOpen] = useState(true);
+  const [isEditingUser, setIsEditingUser] = useState(false);
   const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
   const [isProvisioningUser, setIsProvisioningUser] = useState(false);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
   const [isSyncingCampaigns, setIsSyncingCampaigns] = useState(false);
+  const [isUsersLoading, setIsUsersLoading] = useState(false);
+  const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
   const [loginErrors, setLoginErrors] = useState<FormErrors<LoginFormState>>(
     {},
   );
@@ -762,11 +867,23 @@ export function DashboardApp() {
   const [provisionForm, setProvisionForm] = useState<UserProvisionFormState>(
     initialUserProvisionForm,
   );
+  const [managedUserErrors, setManagedUserErrors] = useState<
+    FormErrors<UserManagementFormState>
+  >({});
+  const [managedUserForm, setManagedUserForm] =
+    useState<UserManagementFormState>(initialUserManagementForm);
+  const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([]);
+  const [editingManagedUserId, setEditingManagedUserId] = useState<
+    string | null
+  >(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<'ALL' | CampaignStatus>(
     'ALL',
   );
   const [session, setSession] = useState<AuthSession | null>(null);
+  const [usersFeedback, setUsersFeedback] = useState<FeedbackState | null>(
+    null,
+  );
   const [user, setUser] = useState<AuthUser | null>(null);
 
   const messages = copy[locale];
@@ -802,11 +919,23 @@ export function DashboardApp() {
     setCampaignErrors({});
   }
 
+  function resetManagedUserDraft() {
+    setEditingManagedUserId(null);
+    setManagedUserForm(initialUserManagementForm);
+    setManagedUserErrors({});
+  }
+
   function closeProvisionModal() {
     setIsProvisionModalOpen(false);
     setProvisionForm(initialUserProvisionForm);
     setProvisionErrors({});
     setAuthFeedback(null);
+  }
+
+  function closeUsersModal() {
+    setIsUsersModalOpen(false);
+    setUsersFeedback(null);
+    resetManagedUserDraft();
   }
 
   function closeCampaignModal() {
@@ -828,11 +957,12 @@ export function DashboardApp() {
     setLoginErrors({});
     setAuthFeedback(null);
     setCampaignFeedback(null);
+    closeUsersModal();
     closeProvisionModal();
     closeCampaignModal();
   }
 
-  function handleSessionInvalid(message = messages.sessionInvalid) {
+  function handleSessionInvalid(message: string = messages.sessionInvalid) {
     clearSession();
     setAuthFeedback({
       message,
@@ -908,7 +1038,14 @@ export function DashboardApp() {
       currentSession.refreshToken,
     );
 
-    return execute(refreshed.session.accessToken);
+    const retriedResponse = await execute(refreshed.session.accessToken);
+
+    if (retriedResponse.status === 401) {
+      handleSessionInvalid(messages.sessionExpired);
+      throw new Error(messages.sessionInvalid);
+    }
+
+    return retriedResponse;
   }
 
   async function loadCampaigns(activeSession?: AuthSession | null) {
@@ -947,6 +1084,43 @@ export function DashboardApp() {
       });
     } finally {
       setIsSyncingCampaigns(false);
+    }
+  }
+
+  async function loadUsers(activeSession?: AuthSession | null) {
+    setIsUsersLoading(true);
+
+    try {
+      const response = await runAuthenticatedRequest(
+        `${API_URL}/users`,
+        undefined,
+        activeSession,
+      );
+      const data = await parseJsonResponse<ManagedUser[] | ApiErrorResponse>(
+        response,
+      );
+
+      if (!response.ok || !Array.isArray(data)) {
+        throw new Error(parseApiError(data ?? null, messages.loadUsersFailure));
+      }
+
+      setManagedUsers(data);
+      setUsersFeedback((current) =>
+        current?.tone === 'error' ? null : current,
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message === messages.sessionInvalid) {
+        handleSessionInvalid();
+        return;
+      }
+
+      setUsersFeedback({
+        message:
+          error instanceof Error ? error.message : messages.loadUsersFailed,
+        tone: 'error',
+      });
+    } finally {
+      setIsUsersLoading(false);
     }
   }
 
@@ -1040,7 +1214,22 @@ export function DashboardApp() {
   }, [campaignFeedback]);
 
   useEffect(() => {
-    if (!isProvisionModalOpen && !isCampaignModalOpen) {
+    if (!usersFeedback) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(
+      () => setUsersFeedback(null),
+      usersFeedback.tone === 'error' ? 7000 : 4500,
+    );
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [usersFeedback]);
+
+  useEffect(() => {
+    if (!isProvisionModalOpen && !isCampaignModalOpen && !isUsersModalOpen) {
       return;
     }
 
@@ -1052,6 +1241,14 @@ export function DashboardApp() {
       if (isCampaignModalOpen) {
         setIsCampaignModalOpen(false);
         resetCampaignDraft();
+        return;
+      }
+
+      if (isUsersModalOpen) {
+        setIsUsersModalOpen(false);
+        setUsersFeedback(null);
+        resetManagedUserDraft();
+        return;
       }
 
       if (isProvisionModalOpen) {
@@ -1066,7 +1263,7 @@ export function DashboardApp() {
     return () => {
       window.removeEventListener('keydown', handleEscape);
     };
-  }, [isCampaignModalOpen, isProvisionModalOpen]);
+  }, [isCampaignModalOpen, isProvisionModalOpen, isUsersModalOpen]);
 
   const normalizedSearch = deferredSearchTerm.trim().toLowerCase();
   const filteredCampaigns = campaigns.filter((campaign) => {
@@ -1154,30 +1351,26 @@ export function DashboardApp() {
     setAuthFeedback(null);
 
     try {
-      const response = await runAuthenticatedRequest(
-        `${API_URL}/auth/register`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(provisionForm),
+      const response = await runAuthenticatedRequest(`${API_URL}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      );
-      const data = await parseJsonResponse<AuthResponse | ApiErrorResponse>(
+        body: JSON.stringify(provisionForm),
+      });
+      const data = await parseJsonResponse<ManagedUser | ApiErrorResponse>(
         response,
       );
 
-      if (!response.ok || !data || !('accessToken' in data)) {
+      if (!response.ok || !data || !('role' in data)) {
         throw new Error(parseApiError(data ?? null, messages.provisionFailure));
       }
 
-      const createdUser = buildAuthenticatedUser(data.accessToken, locale);
       closeProvisionModal();
       setAuthFeedback({
         message: messages.createdUserMessage(
-          createdUser.name,
-          formatRole(locale, createdUser.role),
+          data.name,
+          formatRole(locale, data.role),
         ),
         tone: 'success',
       });
@@ -1198,11 +1391,152 @@ export function DashboardApp() {
   }
 
   function openProvisionModal() {
+    closeUsersModal();
     setProvisionForm(initialUserProvisionForm);
     setProvisionErrors({});
     setAuthFeedback(null);
     setIsProvisionModalOpen(true);
     setIsAuthPanelOpen(true);
+  }
+
+  function openUsersModal() {
+    closeProvisionModal();
+    setUsersFeedback(null);
+    setIsUsersModalOpen(true);
+    setIsAuthPanelOpen(true);
+    void loadUsers();
+  }
+
+  function startManagedUserEdit(selectedUser: ManagedUser) {
+    setEditingManagedUserId(selectedUser.id);
+    setManagedUserForm({
+      email: selectedUser.email,
+      name: selectedUser.name,
+      password: '',
+      role: selectedUser.role,
+    });
+    setManagedUserErrors({});
+    setUsersFeedback(null);
+  }
+
+  async function handleManagedUserSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (!editingManagedUserId) {
+      return;
+    }
+
+    const nextErrors = validateManagedUserForm(locale, managedUserForm, false);
+    setManagedUserErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setUsersFeedback({
+        message: messages.reviewUserFields,
+        tone: 'error',
+      });
+      return;
+    }
+
+    setIsEditingUser(true);
+    setUsersFeedback(null);
+
+    try {
+      const payload = {
+        name: managedUserForm.name.trim(),
+        email: managedUserForm.email.trim(),
+        role: managedUserForm.role,
+        ...(managedUserForm.password
+          ? { password: managedUserForm.password }
+          : {}),
+      };
+      const response = await runAuthenticatedRequest(
+        `${API_URL}/users/${editingManagedUserId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      const data = await parseJsonResponse<ManagedUser | ApiErrorResponse>(
+        response,
+      );
+
+      if (!response.ok || !data || !('role' in data)) {
+        throw new Error(parseApiError(data ?? null, messages.saveUserFailure));
+      }
+
+      await loadUsers();
+      resetManagedUserDraft();
+      setUsersFeedback({
+        message: messages.userUpdated,
+        tone: 'success',
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === messages.sessionInvalid) {
+        handleSessionInvalid();
+        return;
+      }
+
+      setUsersFeedback({
+        message:
+          error instanceof Error ? error.message : messages.saveUserFailed,
+        tone: 'error',
+      });
+    } finally {
+      setIsEditingUser(false);
+    }
+  }
+
+  async function handleDeleteManagedUser(selectedUser: ManagedUser) {
+    if (!window.confirm(messages.confirmDeleteUser(selectedUser.name))) {
+      return;
+    }
+
+    setIsUsersLoading(true);
+    setUsersFeedback(null);
+
+    try {
+      const response = await runAuthenticatedRequest(
+        `${API_URL}/users/${selectedUser.id}`,
+        {
+          method: 'DELETE',
+        },
+      );
+      const data = await parseJsonResponse<ApiErrorResponse>(response);
+
+      if (!response.ok) {
+        throw new Error(
+          parseApiError(data ?? null, messages.removeUserFailure),
+        );
+      }
+
+      if (editingManagedUserId === selectedUser.id) {
+        resetManagedUserDraft();
+      }
+
+      await loadUsers();
+      setUsersFeedback({
+        message: messages.userRemoved,
+        tone: 'success',
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === messages.sessionInvalid) {
+        handleSessionInvalid();
+        return;
+      }
+
+      setUsersFeedback({
+        message:
+          error instanceof Error ? error.message : messages.removeUserFailed,
+        tone: 'error',
+      });
+    } finally {
+      setIsUsersLoading(false);
+    }
   }
 
   function openCreateCampaignModal() {
@@ -1231,7 +1565,11 @@ export function DashboardApp() {
   async function handleCampaignSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const nextErrors = validateCampaignForm(locale, campaignForm);
+    const nextErrors = validateCampaignForm(
+      locale,
+      campaignForm,
+      editingCampaignId,
+    );
     setCampaignErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
@@ -1251,13 +1589,13 @@ export function DashboardApp() {
         description: campaignForm.description.trim(),
         status: campaignForm.status,
         budget: Number(campaignForm.budget),
-        startDate: new Date(campaignForm.startDate).toISOString(),
+        startDate: toLocalDateISOString(campaignForm.startDate),
         endDate: editingCampaignId
           ? campaignForm.endDate
-            ? new Date(campaignForm.endDate).toISOString()
+            ? toLocalDateISOString(campaignForm.endDate)
             : null
           : campaignForm.endDate
-            ? new Date(campaignForm.endDate).toISOString()
+            ? toLocalDateISOString(campaignForm.endDate)
             : undefined,
       };
 
@@ -1363,6 +1701,7 @@ export function DashboardApp() {
               <div
                 className={styles.preferenceGroup}
                 aria-label={messages.localeLabel}
+                role="group"
               >
                 <button
                   className={`${styles.preferenceButton} ${
@@ -1386,6 +1725,7 @@ export function DashboardApp() {
               <div
                 className={styles.preferenceGroup}
                 aria-label={messages.themeLabel}
+                role="group"
               >
                 <button
                   className={`${styles.preferenceButton} ${
@@ -1477,13 +1817,22 @@ export function DashboardApp() {
             </div>
             <div className={styles.panelHeaderActions}>
               {user?.role === 'ADMIN' ? (
-                <button
-                  className={styles.primaryButton}
-                  onClick={openProvisionModal}
-                  type="button"
-                >
-                  {messages.newAccess}
-                </button>
+                <>
+                  <button
+                    className={styles.primaryButton}
+                    onClick={openProvisionModal}
+                    type="button"
+                  >
+                    {messages.newAccess}
+                  </button>
+                  <button
+                    className={styles.secondaryButton}
+                    onClick={openUsersModal}
+                    type="button"
+                  >
+                    {messages.manageUsers}
+                  </button>
+                </>
               ) : null}
               {user ? (
                 <button
@@ -1940,6 +2289,242 @@ export function DashboardApp() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {isUsersModalOpen ? (
+        <div
+          className={styles.modalBackdrop}
+          onClick={closeUsersModal}
+          role="presentation"
+        >
+          <div
+            className={styles.modal}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="users-modal-title"
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <span className={styles.sectionLabel}>{messages.users}</span>
+                <h3 id="users-modal-title">{messages.manageUsersTitle}</h3>
+                <p className={styles.panelLead}>{messages.manageUsersLead}</p>
+              </div>
+              <div className={styles.actionRow}>
+                <button
+                  className={styles.secondaryButton}
+                  onClick={openProvisionModal}
+                  type="button"
+                >
+                  {messages.createNewAccess}
+                </button>
+                <button
+                  className={styles.ghostButton}
+                  onClick={closeUsersModal}
+                  type="button"
+                >
+                  {messages.close}
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.form}>
+              {renderDismissibleFeedback(locale, usersFeedback, () =>
+                setUsersFeedback(null),
+              )}
+
+              {isUsersLoading ? (
+                <p className={styles.mutedBox}>{messages.loadingUsers}</p>
+              ) : managedUsers.length === 0 ? (
+                <div className={styles.emptyState}>{messages.noUsers}</div>
+              ) : (
+                <div className={styles.userDirectory}>
+                  {managedUsers.map((managedUser) => {
+                    const isCurrentSessionUser = managedUser.id === user?.sub;
+
+                    return (
+                      <article className={styles.userCard} key={managedUser.id}>
+                        <div className={styles.userCardHeader}>
+                          <div className={styles.userIdentity}>
+                            <strong>{managedUser.name}</strong>
+                            <span>{managedUser.email}</span>
+                          </div>
+                          <span className={styles.statusPill}>
+                            {formatRole(locale, managedUser.role)}
+                          </span>
+                        </div>
+
+                        {isCurrentSessionUser ? (
+                          <p className={styles.userNote}>
+                            {messages.currentSessionUser}
+                          </p>
+                        ) : null}
+
+                        <div className={styles.actionRow}>
+                          <button
+                            className={styles.secondaryButton}
+                            disabled={isCurrentSessionUser || isUsersLoading}
+                            onClick={() => startManagedUserEdit(managedUser)}
+                            type="button"
+                          >
+                            {messages.editUser}
+                          </button>
+                          <button
+                            className={styles.dangerButton}
+                            disabled={isCurrentSessionUser || isUsersLoading}
+                            onClick={() =>
+                              void handleDeleteManagedUser(managedUser)
+                            }
+                            type="button"
+                          >
+                            {messages.delete}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+
+              {editingManagedUserId ? (
+                <div className={styles.editorPanel}>
+                  <div>
+                    <span className={styles.sectionLabel}>
+                      {messages.users}
+                    </span>
+                    <h4 className={styles.editorTitle}>
+                      {messages.editUserTitle}
+                    </h4>
+                    <p className={styles.panelLead}>{messages.editUserLead}</p>
+                  </div>
+
+                  <form
+                    className={styles.form}
+                    noValidate
+                    onSubmit={handleManagedUserSubmit}
+                  >
+                    <div className={styles.formGrid}>
+                      <label className={styles.field}>
+                        <span>{messages.name}</span>
+                        <input
+                          aria-invalid={Boolean(managedUserErrors.name)}
+                          onChange={(event) => {
+                            setManagedUserForm((current) => ({
+                              ...current,
+                              name: event.target.value,
+                            }));
+                            setManagedUserErrors((current) => {
+                              const next = { ...current };
+                              delete next.name;
+                              return next;
+                            });
+                            setUsersFeedback(null);
+                          }}
+                          value={managedUserForm.name}
+                        />
+                        {renderFieldMessage(managedUserErrors.name)}
+                      </label>
+
+                      <label className={styles.field}>
+                        <span>{messages.role}</span>
+                        <select
+                          aria-invalid={Boolean(managedUserErrors.role)}
+                          onChange={(event) => {
+                            setManagedUserForm((current) => ({
+                              ...current,
+                              role: event.target.value as Role,
+                            }));
+                            setManagedUserErrors((current) => {
+                              const next = { ...current };
+                              delete next.role;
+                              return next;
+                            });
+                            setUsersFeedback(null);
+                          }}
+                          value={managedUserForm.role}
+                        >
+                          {roles.map((role) => (
+                            <option key={role} value={role}>
+                              {formatRole(locale, role)}
+                            </option>
+                          ))}
+                        </select>
+                        {renderFieldMessage(managedUserErrors.role)}
+                      </label>
+
+                      <label className={styles.field}>
+                        <span>{messages.email}</span>
+                        <input
+                          aria-invalid={Boolean(managedUserErrors.email)}
+                          onChange={(event) => {
+                            setManagedUserForm((current) => ({
+                              ...current,
+                              email: event.target.value,
+                            }));
+                            setManagedUserErrors((current) => {
+                              const next = { ...current };
+                              delete next.email;
+                              return next;
+                            });
+                            setUsersFeedback(null);
+                          }}
+                          type="email"
+                          value={managedUserForm.email}
+                        />
+                        {renderFieldMessage(managedUserErrors.email)}
+                      </label>
+
+                      <label className={styles.field}>
+                        <span>{messages.password}</span>
+                        <input
+                          aria-invalid={Boolean(managedUserErrors.password)}
+                          onChange={(event) => {
+                            setManagedUserForm((current) => ({
+                              ...current,
+                              password: event.target.value,
+                            }));
+                            setManagedUserErrors((current) => {
+                              const next = { ...current };
+                              delete next.password;
+                              return next;
+                            });
+                            setUsersFeedback(null);
+                          }}
+                          placeholder={messages.passwordExample}
+                          type="password"
+                          value={managedUserForm.password}
+                        />
+                        {renderFieldMessage(
+                          managedUserErrors.password,
+                          messages.leavePasswordBlank,
+                        )}
+                      </label>
+                    </div>
+
+                    <div className={styles.actionRow}>
+                      <button
+                        className={styles.primaryButton}
+                        disabled={isEditingUser}
+                        type="submit"
+                      >
+                        {isEditingUser
+                          ? messages.saving
+                          : messages.saveUserChanges}
+                      </button>
+                      <button
+                        className={styles.ghostButton}
+                        onClick={resetManagedUserDraft}
+                        type="button"
+                      >
+                        {messages.cancel}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

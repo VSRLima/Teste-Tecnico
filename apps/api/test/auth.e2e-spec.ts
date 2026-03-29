@@ -51,10 +51,9 @@ describe('AuthModule (e2e)', () => {
       .post('/api/auth/register')
       .set('Authorization', `Bearer ${adminLoginResponse.body.accessToken}`)
       .send({
-        name: 'Second Admin',
-        email: 'second-admin@test.com',
+        name: 'Second User',
+        email: 'second-user@test.com',
         password: 'Admin@123',
-        role: 'ADMIN',
       });
 
     expect(adminRegisterResponse.status).toBe(201);

@@ -434,6 +434,47 @@
   gap: 1rem;
 }
 
+.userDirectory {
+  display: grid;
+  gap: 1rem;
+}
+
+.userCard,
+.editorPanel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 45%),
+    var(--surface-raised);
+  border: 1px solid var(--border-faint);
+}
+
+.userCardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.userIdentity {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.userIdentity span,
+.userNote {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.editorTitle {
+  margin-top: 0.4rem;
+  font-size: 1.2rem;
+  letter-spacing: -0.04em;
+}
+
 .campaignCard {
   display: grid;
   gap: 1rem;
@@ -596,5 +637,10 @@
   .distributionItem {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .userCardHeader {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

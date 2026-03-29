@@ -24,10 +24,17 @@ export class AppLogger extends ConsoleLogger implements LoggerService {
   }
 
   override error(message: unknown, trace?: string, context?: string) {
+    const resolvedMessage =
+      message instanceof Error
+        ? message.message
+        : this.serializeLogMessage(message);
+    const resolvedTrace =
+      trace || (message instanceof Error ? message.stack : undefined);
+
     this.printStructuredLog({
       level: 'error',
-      message: this.serializeLogMessage(message),
-      trace,
+      message: resolvedMessage,
+      trace: resolvedTrace,
       context,
     });
   }
@@ -79,7 +86,7 @@ export class AppLogger extends ConsoleLogger implements LoggerService {
       context: payload.context,
       message: payload.message,
       trace: payload.trace,
-      ...payload.metadata,
+      metadata: payload.metadata,
     });
 
     switch (payload.level) {

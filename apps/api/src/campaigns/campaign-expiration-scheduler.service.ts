@@ -175,9 +175,8 @@ export class CampaignExpirationSchedulerService {
             : String(recoveryError),
           error instanceof Error ? error.stack : String(error),
         );
+        throw error;
       }
-
-      throw error;
     }
 
     this.logger.log(

@@ -3,6 +3,7 @@ import * as Joi from 'joi';
 const jwtDurationPattern = /^\d+[smhdwMy]$/;
 
 export type AppEnvironment = {
+  ALLOWED_ORIGINS?: string;
   DATABASE_URL: string;
   FAKE_PASSWORD_HASH: string;
   JWT_EXPIRES_IN: string;
@@ -22,6 +23,7 @@ export type AppEnvironment = {
 };
 
 const envSchema = Joi.object<AppEnvironment>({
+  ALLOWED_ORIGINS: Joi.string().allow('').optional(),
   NODE_ENV: Joi.string().default('development'),
   PORT: Joi.number().port().default(3333),
   DATABASE_URL: Joi.string().required(),

@@ -40,7 +40,6 @@ export class AuthService {
       throw new ConflictException('Email already in use');
     }
 
-    const desiredRole = dto.role ?? 'MANAGER';
     const passwordHash = await bcrypt.hash(dto.password, 10);
 
     try {
@@ -48,7 +47,7 @@ export class AuthService {
         email: dto.email,
         name: dto.name,
         passwordHash,
-        role: desiredRole,
+        role: 'USER',
       });
 
       return this.buildAuthResponse(user);

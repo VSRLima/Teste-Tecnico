@@ -1,6 +1,7 @@
 import {
   CallHandler,
   ExecutionContext,
+  HttpException,
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
@@ -40,6 +41,14 @@ export class HttpLoggingInterceptor implements NestInterceptor {
         );
       }),
       catchError((error: unknown) => {
+        const statusCode =
+          error instanceof HttpException
+            ? error.getStatus()
+            : typeof (error as { getStatus?: unknown })?.getStatus ===
+                'function'
+              ? (error as { getStatus: () => number }).getStatus()
+              : response.statusCode;
+
         this.logger.logWithMetadata(
           'error',
           'HTTP request failed',
@@ -48,7 +57,7 @@ export class HttpLoggingInterceptor implements NestInterceptor {
             method: request.method,
             path: request.originalUrl ?? request.url,
             requestId: request.requestId,
-            statusCode: response.statusCode,
+            statusCode,
             userId: request.user?.sub,
           },
           HttpLoggingInterceptor.name,

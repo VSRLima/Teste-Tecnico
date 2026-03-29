@@ -2,19 +2,23 @@
 
 MVP full-stack para o teste técnico da DirectAds.
 
-`DirectCash Studio` é um painel de gestão de campanhas com autenticação JWT, perfis de acesso, CRUD completo e interface responsiva.
+`DirectCash Studio` é um painel de gestão de campanhas com autenticação JWT, perfis de acesso, CRUD completo, worker assíncrono e interface responsiva.
 
 ## Funcionalidades entregues
 
-- Login e registro com JWT
-- Perfis `ADMIN` e `MANAGER`
+- Login, refresh e provisionamento autenticado com JWT
+- Perfis `ADMIN`, `MANAGER` e `USER`
+- Gestão administrativa de usuários com listagem, edição e exclusão
 - CRUD completo de campanhas
 - Worker de expiração de campanhas com BullMQ
-- Swagger protegido por `user/password` via variável de ambiente
+- Swagger protegido por basic auth via variável de ambiente, incluindo endpoint YAML
 - Dashboard responsivo com estados de carregamento, erro, vazio e sucesso
 - Modo claro/escuro persistido no navegador
 - Internacionalização básica `pt-BR` / `en-US`
 - Observabilidade com `x-request-id`, health checks e logs JSON estruturados
+- CORS com whitelist configurável por `ALLOWED_ORIGINS`
+- Redis com autenticação por senha e `appendonly` no ambiente Docker local
+- Guard rail de runtime para impedir segredos JWT de teste fora de `NODE_ENV=test`
 - Seed com usuários e campanhas demo
 - Testes unitários no backend
 - Testes e2e reais com schema isolado no PostgreSQL
@@ -60,6 +64,17 @@ Antes disso, opcionalmente copie as variáveis locais do compose:
 cp .env.example .env
 ```
 
+O arquivo raiz `.env.example` já traz valores de desenvolvimento para:
+
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_PORT`
+- `REDIS_PORT`
+- `REDIS_PASSWORD`
+
+`docker-compose.yml` agora exige explicitamente `POSTGRES_PASSWORD` e `REDIS_PASSWORD`, então mantenha esses valores definidos no `.env` antes de subir os containers.
+
 ```bash
 docker compose up -d
 ```
@@ -79,8 +94,14 @@ API:
 cp apps/api/.env.example apps/api/.env
 ```
 
-Se quiser usar o Swagger localmente, ajuste `SWAGGER_ENABLED=true` e configure
-`SWAGGER_USER` e `SWAGGER_PASSWORD` com credenciais fortes.
+Ajustes importantes no `apps/api/.env`:
+
+- configure `DATABASE_URL` com credenciais reais para o Postgres local
+- configure `REDIS_PASSWORD` com a mesma senha usada no `docker-compose`
+- ajuste `ALLOWED_ORIGINS` para as origens do frontend que podem enviar credenciais
+- se quiser usar o Swagger localmente, defina `SWAGGER_ENABLED=true` e configure `SWAGGER_USER` e `SWAGGER_PASSWORD`
+
+Observação: a API e o worker falham na inicialização fora de `NODE_ENV=test` se `JWT_SECRET` ou `JWT_REFRESH_SECRET` ainda contiverem valores fracos como `change-me`.
 
 Web:
 
@@ -114,6 +135,9 @@ Credenciais demo da seed:
 - `admin@directcash.local / Admin@123`
 - `manager@directcash.local / Manager@123`
 
+Observação: a seed cria contas demo `ADMIN` e `MANAGER`, mas novos usuários provisionados pela rota `/api/auth/register` recebem o papel `USER` por padrão.
+No dashboard administrativo, o fluxo de novo acesso agora usa a área de gestão de usuários e permite escolher o papel no momento da criação via endpoint admin-only dedicado.
+
 ## Comandos úteis
 
 Raiz:
@@ -132,19 +156,23 @@ Backend:
 - `npm run db:push --workspace @directcash/api`
 - `npm run db:seed --workspace @directcash/api`
 - `npm run test --workspace @directcash/api -- --runInBand`
-- `npm run test:e2e --workspace @directcash/api`
+- `TEST_DATABASE_URL=postgresql://<user>:<password>@localhost:5433/directcash?schema=public npm run test:e2e --workspace @directcash/api`
 
 ## Regras de acesso
 
 - `ADMIN`
-  - cria contas admin
+  - provisiona novos usuários autenticados
+  - lista, edita e exclui usuários pela área administrativa
   - acessa todas as campanhas
   - cria, edita e remove qualquer campanha
   - acessa o Swagger quando habilitado por env
 - `MANAGER`
-  - registra e acessa o sistema
   - cria campanhas próprias
   - visualiza, edita e remove apenas campanhas sob sua responsabilidade
+- `USER`
+  - autentica e mantém sessão válida
+  - não provisiona novos usuários
+  - segue as mesmas restrições de acesso autenticado definidas pelo backend para campanhas e rotas protegidas
 
 ## Decisões técnicas e arquiteturais
 
@@ -164,10 +192,16 @@ Backend:
   - reduz complexidade de sessão neste momento e acelera a entrega end-to-end
 - PostgreSQL via Docker no desenvolvimento
   - facilita avaliação local e evita dependência de instalação manual
+- Redis autenticado no compose
+  - aproxima o ambiente local de um cenário menos permissivo e evita assumir Redis aberto
 - Dockerfiles separados para API e Web
   - facilitam deploy independente em Railway e também servem como base de containerização
 - Schema isolado para e2e
   - evita contaminar a base de desenvolvimento e torna os testes HTTP repetíveis
+- CORS por whitelist
+  - evita expor cookies e credenciais para origens arbitrárias
+- papel padrão `USER` em registros
+  - reduz risco de escalonamento de privilégio por payload do cliente
 - Logger JSON + request id
   - simplificam correlação de falhas em container, CI e produção
 - Tema e idioma persistidos no frontend
@@ -194,7 +228,13 @@ Variáveis de ambiente:
 - `PORT=3333`
 - `DATABASE_URL=<fornecida pelo Railway/Postgres>`
 - `JWT_SECRET=<segredo forte>`
+- `JWT_REFRESH_SECRET=<segredo forte e diferente do access token>`
 - `JWT_EXPIRES_IN=1d`
+- `JWT_REFRESH_EXPIRES_IN=7d`
+- `REDIS_HOST=<host do redis>`
+- `REDIS_PORT=<porta do redis>`
+- `REDIS_PASSWORD=<senha do redis>`
+- `ALLOWED_ORIGINS=https://<url-do-web>`
 - `SWAGGER_ENABLED=false`
 - `SWAGGER_USER=<usuario do swagger>`
 - `SWAGGER_PASSWORD=<senha do swagger>`
@@ -240,11 +280,12 @@ Variáveis de ambiente:
 - `GET /api/health`
   - liveness simples da API
 - `GET /api/health/ready`
-  - readiness com verificação real do PostgreSQL
+  - readiness com verificação real do PostgreSQL e resposta estruturada em caso de falha
 - Header `x-request-id`
   - correlaciona requests no cliente, logs e infraestrutura
 - Logs estruturados em JSON
   - incluem método, rota, status, duração e `userId` quando autenticado
+  - preservam stack trace em logs de erro
 
 ## Dependências instaladas e por que foram escolhidas
 

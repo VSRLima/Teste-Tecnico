@@ -43,7 +43,7 @@ describe('AuthService', () => {
     email: 'manager@test.com',
     name: 'Manager',
     passwordHash: 'hashed-password',
-    role: Role.MANAGER,
+    role: Role.USER,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -74,7 +74,7 @@ describe('AuthService', () => {
     });
   });
 
-  it('registers a manager account and returns session tokens', async () => {
+  it('registers a user account and returns session tokens', async () => {
     findByEmailMock.mockResolvedValue(null);
     createMock.mockResolvedValue(user);
     (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
@@ -89,7 +89,7 @@ describe('AuthService', () => {
       email: 'manager@test.com',
       name: 'Manager',
       passwordHash: 'hashed-password',
-      role: 'MANAGER',
+      role: 'USER',
     });
     expect(result).toEqual({
       accessToken: 'signed-access-token',
@@ -99,7 +99,7 @@ describe('AuthService', () => {
       1,
       expect.objectContaining({
         name: 'Manager',
-        role: 'MANAGER',
+        role: 'USER',
         sub: 'user-1',
       }),
     );
@@ -138,11 +138,11 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('allows an admin to create another admin', async () => {
+  it('ignores client-supplied elevated roles during registration', async () => {
     findByEmailMock.mockResolvedValue(null);
     createMock.mockResolvedValue({
       ...user,
-      role: Role.ADMIN,
+      role: Role.USER,
     } satisfies User);
     (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
 
@@ -150,14 +150,13 @@ describe('AuthService', () => {
       email: 'admin@test.com',
       name: 'Admin',
       password: 'Str0ngP@ssw0rd!',
-      role: 'ADMIN',
     });
 
     expect(createMock).toHaveBeenNthCalledWith(1, {
       email: 'admin@test.com',
       name: 'Admin',
       passwordHash: 'hashed-password',
-      role: 'ADMIN',
+      role: 'USER',
     });
   });
 
@@ -177,7 +176,7 @@ describe('AuthService', () => {
       1,
       expect.objectContaining({
         name: 'Manager',
-        role: 'MANAGER',
+        role: 'USER',
         sub: 'user-1',
       }),
     );
@@ -214,7 +213,7 @@ describe('AuthService', () => {
 
   it('refreshes tokens when the refresh token is valid and the user exists', async () => {
     verifyAsyncMock.mockResolvedValue({
-      role: 'MANAGER',
+      role: 'USER',
       sub: 'user-1',
     });
     findByIdMock.mockResolvedValue(user);
@@ -231,7 +230,7 @@ describe('AuthService', () => {
 
   it('rejects refresh tokens for users that no longer exist', async () => {
     verifyAsyncMock.mockResolvedValue({
-      role: 'MANAGER',
+      role: 'USER',
       sub: 'user-1',
     });
     findByIdMock.mockResolvedValue(null);

@@ -13,12 +13,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
           configService.get<string>('REDIS_USERNAME') || undefined;
         const password =
           configService.get<string>('REDIS_PASSWORD') || undefined;
+        const parsedPort = Number(configService.get<string>('REDIS_PORT'));
+        const parsedDb = Number(configService.get<string>('REDIS_DB'));
 
         return {
           connection: {
             host: configService.get<string>('REDIS_HOST', '127.0.0.1'),
-            port: configService.get<number>('REDIS_PORT', 6379),
-            db: configService.get<number>('REDIS_DB', 0),
+            port: Number.isNaN(parsedPort) ? 6379 : parsedPort,
+            db: Number.isNaN(parsedDb) ? 0 : parsedDb,
             username,
             password,
             maxRetriesPerRequest: null,

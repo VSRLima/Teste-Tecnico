@@ -92,7 +92,13 @@ describe('CampaignsModule (e2e)', () => {
 
     const managerTwoCampaign = listAsAdminResponse.body.find(
       (campaign: { name: string }) => campaign.name === 'Campaign Two',
-    ) as { id: string };
+    ) as { id: string } | undefined;
+
+    expect(managerTwoCampaign).toBeDefined();
+
+    if (!managerTwoCampaign) {
+      throw new Error('Expected seeded campaign "Campaign Two" to exist');
+    }
 
     const forbiddenReadResponse = await request(httpServer)
       .get(`/api/campaigns/${managerTwoCampaign.id}`)

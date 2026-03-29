@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DirectCash Web
 
-## Getting Started
+Frontend Next.js 16 do painel `DirectCash Studio`.
 
-First, run the development server:
+## O que a aplicação cobre
+
+- autenticação contra a API com access token e refresh token
+- dashboard de campanhas com filtros, estados de carregamento e feedbacks
+- criação e edição de campanhas
+- modal administrativa para listar, editar e excluir usuários
+- criação de novo acesso com seleção de perfil via endpoint admin-only
+- preferências persistidas de idioma (`pt-BR` / `en-US`) e tema (`dark` / `light`)
+- tratamento de sessão expirada com refresh automático e invalidação controlada após `401` repetido
+- layout responsivo com ajustes de acessibilidade nos grupos de preferência e foco visível
+
+## Ambiente local
+
+Crie o arquivo de ambiente do frontend:
+
+```bash
+cp .env.example .env.local
+```
+
+Variável principal:
+
+- `NEXT_PUBLIC_API_URL`: URL base da API, por padrão `http://localhost:3333/api`
+
+## Desenvolvimento
+
+Pelo root do monorepo:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ou apenas o frontend:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev --workspace @directcash/web
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build e qualidade
 
-## Learn More
+```bash
+npm run lint --workspace @directcash/web
+npm run build --workspace @directcash/web
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Observações de integração
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- a API deve liberar a origem do frontend em `ALLOWED_ORIGINS`
+- datas digitadas no formulário de campanha são serializadas como datas locais para evitar deslocamento de dia ao converter para ISO
+- o modal de campanha e o modal de provisionamento respondem a `Escape` fechando apenas um por vez
