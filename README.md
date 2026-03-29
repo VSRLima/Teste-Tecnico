@@ -269,7 +269,7 @@ npm run db:seed --workspace @directcash/api
 Configuração:
 
 - Dockerfile path: `Dockerfile.api`
-- Start command: `node apps/api/dist/worker.js`
+- Start command: `node apps/api/dist/src/worker.js`
 
 Variáveis de ambiente:
 
