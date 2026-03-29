@@ -1,0 +1,646 @@
+.shell {
+  min-height: 100vh;
+  display: grid;
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+  gap: 1.5rem;
+}
+
+.heroSingle {
+  grid-template-columns: 1fr;
+}
+
+.heroSingle .heroCopy h1 {
+  max-width: 100%;
+}
+
+.heroSingle .heroCopy p {
+  max-width: 72ch;
+}
+
+.heroCopy,
+.heroCard,
+.panel,
+.modal {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 38%),
+    var(--surface-panel);
+  box-shadow: var(--shadow-strong), var(--shadow-inset);
+  backdrop-filter: blur(20px);
+}
+
+.heroCopy {
+  display: grid;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.heroTopBar,
+.preferenceStack,
+.preferenceGroup {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.heroTopBar,
+.preferenceGroup {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preferenceStack {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.preferenceGroup {
+  padding: 0.28rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.preferenceButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.preferenceButtonActive {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.eyebrow,
+.sectionLabel,
+.syncFlag,
+.statusPill {
+  width: fit-content;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.eyebrow,
+.sectionLabel {
+  color: var(--accent);
+}
+
+.heroCopy h1 {
+  max-width: 10ch;
+  font-size: clamp(2.8rem, 5vw, 5.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+}
+
+.heroCopy p,
+.panelLead,
+.mutedBox,
+.emptyState,
+.fieldHint,
+.metaGrid dt,
+.accountCard p,
+.distributionItem span {
+  color: var(--muted);
+}
+
+.heroCopy p {
+  max-width: 54ch;
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.heroMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.heroMetrics article,
+.distributionItem,
+.accountCard,
+.mutedBox,
+.emptyState,
+.toolbar {
+  border-radius: 20px;
+  background: var(--surface-muted);
+}
+
+.heroMetrics article {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+
+.heroMetrics strong {
+  font-size: 1.1rem;
+}
+
+.heroCard {
+  display: grid;
+  gap: 1.2rem;
+  align-content: start;
+  padding: 2rem;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(255, 126, 61, 0.18),
+      transparent 34%
+    ),
+    var(--surface-panel-strong);
+}
+
+.heroCardHeader,
+.panelHeader,
+.panelHeaderActions,
+.cardTop,
+.listHeader,
+.feedback {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.heroCardHeader {
+  align-items: center;
+}
+
+.syncFlag,
+.statusPill {
+  padding: 0.45rem 0.8rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.distributionList {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.distributionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.1rem;
+}
+
+.distributionItem div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.distributionItem b {
+  font-size: 1.6rem;
+  letter-spacing: -0.06em;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.panel {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.panelHeader {
+  align-items: flex-start;
+}
+
+.panelHeader h2 {
+  margin-top: 0.4rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.04em;
+}
+
+.panelLead {
+  margin-top: 0.55rem;
+  line-height: 1.6;
+}
+
+.panelHeaderActions {
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.panelBody {
+  display: grid;
+  gap: 1rem;
+}
+
+.accountCard,
+.mutedBox,
+.emptyState,
+.toolbar {
+  padding: 1rem 1.1rem;
+}
+
+.accountCard {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.accountCard div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.formGrid,
+.filterGroup {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field,
+.filterField {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.field span,
+.filterField span {
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.field input,
+.field select,
+.field textarea,
+.filterField input,
+.filterField select {
+  width: 100%;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  background: var(--surface-input);
+  color: var(--text);
+  padding: 0.95rem 1rem;
+  font: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 132px;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.filterField input:focus,
+.filterField select:focus {
+  outline: 2px solid var(--accent-outline);
+  border-color: transparent;
+}
+
+.field input[aria-invalid='true'],
+.field select[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
+  border-color: var(--field-error);
+}
+
+.fieldError,
+.fieldHint,
+.fieldSpacer {
+  display: block;
+  min-height: 1.2rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.fieldError {
+  color: var(--field-error);
+}
+
+.toolbar {
+  display: grid;
+  gap: 1rem;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton,
+.ghostButton,
+.iconButton {
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease,
+    background 160ms ease;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+  padding: 0.95rem 1.2rem;
+  font-weight: 700;
+}
+
+.ghostButton {
+  padding: 0.8rem 1rem;
+}
+
+.iconButton {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-grid;
+  place-items: center;
+  color: var(--muted);
+  background: var(--surface-interactive);
+  flex: 0 0 auto;
+}
+
+.iconButton svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.primaryButton {
+  color: var(--panel-ink);
+  background: linear-gradient(135deg, #ffbe73, #ff7e3d);
+}
+
+.secondaryButton {
+  color: var(--text);
+  background: var(--surface-interactive);
+}
+
+.dangerButton {
+  color: var(--danger-text);
+  background: var(--danger-surface);
+}
+
+.ghostButton {
+  color: var(--muted);
+  background: var(--surface-interactive);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled,
+.ghostButton:disabled,
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.listHeader {
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.userDirectory {
+  display: grid;
+  gap: 1rem;
+}
+
+.userCard,
+.editorPanel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 45%),
+    var(--surface-raised);
+  border: 1px solid var(--border-faint);
+}
+
+.userCardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.userIdentity {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.userIdentity span,
+.userNote {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.editorTitle {
+  margin-top: 0.4rem;
+  font-size: 1.2rem;
+  letter-spacing: -0.04em;
+}
+
+.campaignCard {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 45%),
+    var(--surface-raised);
+  border: 1px solid var(--border-faint);
+}
+
+.cardBody {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.cardBody h3 {
+  font-size: 1.1rem;
+}
+
+.cardBody p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metaGrid div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.metaGrid dd {
+  font-size: 0.9rem;
+}
+
+.feedback {
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  line-height: 1.5;
+}
+
+.feedbackSuccess {
+  background: var(--success-surface);
+  color: var(--success-text);
+}
+
+.feedbackError {
+  background: var(--danger-surface);
+  color: var(--danger-text);
+}
+
+.feedbackInfo {
+  background: var(--info-surface);
+  color: var(--info-text);
+}
+
+.feedbackClose {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: var(--overlay);
+  backdrop-filter: blur(10px);
+}
+
+.modal {
+  width: min(760px, 100%);
+  padding: 1.5rem;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.modalHeader h3 {
+  margin-top: 0.4rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.04em;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .primaryButton:hover,
+  .secondaryButton:hover,
+  .dangerButton:hover,
+  .ghostButton:hover,
+  .iconButton:hover,
+  .preferenceButton:hover,
+  .feedbackClose:hover {
+    transform: translateY(-1px);
+    opacity: 0.92;
+  }
+}
+
+@media (max-width: 1080px) {
+  .hero,
+  .workspace,
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .shell {
+    padding: 1rem;
+  }
+
+  .heroCopy,
+  .heroCard,
+  .panel,
+  .modal {
+    padding: 1.2rem;
+    border-radius: 22px;
+  }
+
+  .heroMetrics,
+  .formGrid,
+  .filterGroup,
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .heroCardHeader,
+  .panelHeader,
+  .panelHeaderActions,
+  .listHeader,
+  .feedback,
+  .modalHeader,
+  .heroTopBar,
+  .preferenceGroup {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .heroCopy h1 {
+    max-width: 100%;
+  }
+
+  .distributionItem {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .userCardHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

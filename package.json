@@ -1,0 +1,43 @@
+{
+  "name": "teste-tecnico-directads",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MVP full-stack para o teste tecnico da DirectAds.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n web,api,worker -c blue,green,yellow \"npm run dev:web\" \"npm run dev:api\" \"npm run dev:worker\"",
+    "dev:web": "npm run dev --workspace @directcash/web",
+    "dev:api": "npm run dev --workspace @directcash/api",
+    "dev:worker": "npm run start:worker:dev --workspace @directcash/api",
+    "db:generate:api": "npm exec --workspace @directcash/api prisma generate",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test:api": "npm run test --workspace @directcash/api -- --runInBand",
+    "test:e2e:api": "npm run test:e2e --workspace @directcash/api",
+    "ci": "node ./scripts/run-ci.cjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "postinstall": "npm run db:generate:api",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,cjs,mjs,ts,tsx,jsx,json,md,css,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1"
+  }
+}
