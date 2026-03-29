@@ -1,0 +1,168 @@
+:root {
+  --background: #0b111c;
+  --background-soft: #10192a;
+  --background-shell: rgba(11, 17, 28, 0.98);
+  --surface-panel: rgba(19, 24, 36, 0.9);
+  --surface-panel-strong: rgba(19, 24, 36, 0.92);
+  --surface-raised: rgba(7, 12, 22, 0.72);
+  --surface-muted: rgba(252, 248, 239, 0.05);
+  --surface-interactive: rgba(252, 248, 239, 0.06);
+  --surface-input: rgba(6, 11, 20, 0.55);
+  --text: #f4ecde;
+  --muted: #b4ad9f;
+  --accent: #ff9d5c;
+  --accent-soft: rgba(255, 126, 61, 0.16);
+  --accent-outline: rgba(255, 126, 61, 0.45);
+  --panel-ink: #26140a;
+  --border-soft: rgba(244, 236, 222, 0.12);
+  --border-faint: rgba(244, 236, 222, 0.08);
+  --shadow-strong: 0 28px 60px rgba(3, 5, 10, 0.28);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --overlay: rgba(5, 8, 14, 0.72);
+  --grid-line: rgba(255, 255, 255, 0.02);
+  --success-surface: rgba(87, 183, 132, 0.16);
+  --success-text: #d8f6df;
+  --danger-surface: rgba(200, 72, 48, 0.18);
+  --danger-text: #ffd9d2;
+  --info-surface: rgba(255, 126, 61, 0.12);
+  --info-text: #ffe3c4;
+  --field-error: #ffb4ae;
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --background: #f3ece1;
+  --background-soft: #f7f0e4;
+  --background-shell: rgba(243, 236, 225, 0.98);
+  --surface-panel: rgba(255, 251, 245, 0.9);
+  --surface-panel-strong: rgba(255, 252, 247, 0.96);
+  --surface-raised: rgba(255, 248, 239, 0.9);
+  --surface-muted: rgba(97, 74, 49, 0.08);
+  --surface-interactive: rgba(97, 74, 49, 0.09);
+  --surface-input: rgba(255, 255, 255, 0.9);
+  --text: #1d2430;
+  --muted: #6e665c;
+  --accent: #b85a1f;
+  --accent-soft: rgba(184, 90, 31, 0.14);
+  --accent-outline: rgba(184, 90, 31, 0.3);
+  --panel-ink: #fff7ef;
+  --border-soft: rgba(98, 75, 51, 0.16);
+  --border-faint: rgba(98, 75, 51, 0.12);
+  --shadow-strong: 0 24px 40px rgba(110, 83, 53, 0.12);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --overlay: rgba(41, 32, 22, 0.2);
+  --grid-line: rgba(92, 72, 48, 0.05);
+  --success-surface: rgba(54, 132, 87, 0.14);
+  --success-text: #1d5d33;
+  --danger-surface: rgba(183, 66, 56, 0.14);
+  --danger-text: #85231d;
+  --info-surface: rgba(184, 90, 31, 0.12);
+  --info-text: #7a3b13;
+  --field-error: #b74238;
+  color-scheme: light;
+}
+
+html {
+  height: 100%;
+  background:
+    radial-gradient(circle at top, rgba(255, 158, 92, 0.16), transparent 22%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--background) 88%, black),
+      var(--background-soft) 32%,
+      var(--background) 100%
+    );
+}
+
+html,
+body {
+  width: 100%;
+}
+
+body {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(255, 126, 61, 0.12),
+      transparent 18%
+    ),
+    radial-gradient(
+      circle at 80% 0%,
+      rgba(233, 196, 106, 0.12),
+      transparent 14%
+    ),
+    linear-gradient(180deg, rgba(11, 17, 28, 0.92), var(--background-shell));
+  font-family: 'Avenir Next Condensed', 'Trebuchet MS', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background 200ms ease,
+    color 200ms ease;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+*::selection {
+  background: rgba(255, 157, 92, 0.24);
+}
+
+a {
+  color: #ffd1a6;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+a:hover,
+a:focus {
+  color: #fff0dc;
+}
+
+a:focus-visible {
+  outline: 2px solid #ffd1a6;
+  outline-offset: 3px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 36px 36px;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.65),
+    transparent 90%
+  );
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.65), transparent 90%);
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+code,
+pre {
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', 'Cascadia Code', monospace;
+}
