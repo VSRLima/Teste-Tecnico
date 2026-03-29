@@ -210,11 +210,13 @@ Backend:
 
 ## Deploy sugerido no Railway
 
-Estratégia recomendada: criar 3 serviços.
+Estratégia recomendada: criar 5 serviços.
 
 1. PostgreSQL
-2. API usando [Dockerfile.api](./Dockerfile.api)
-3. Web usando [Dockerfile.web](./Dockerfile.web)
+2. Redis
+3. API usando [Dockerfile.api](./Dockerfile.api)
+4. Worker usando [Dockerfile.api](./Dockerfile.api)
+5. Web usando [Dockerfile.web](./Dockerfile.web)
 
 ### Serviço `api`
 
@@ -228,22 +230,32 @@ Variáveis de ambiente:
 - `NODE_ENV=production`
 - `PORT=3333`
 - `DATABASE_URL=<fornecida pelo Railway/Postgres>`
+- `FAKE_PASSWORD_HASH=<hash bcrypt válido>`
 - `JWT_SECRET=<segredo forte>`
 - `JWT_REFRESH_SECRET=<segredo forte e diferente do access token>`
 - `JWT_EXPIRES_IN=1d`
 - `JWT_REFRESH_EXPIRES_IN=7d`
 - `REDIS_HOST=<host do redis>`
 - `REDIS_PORT=<porta do redis>`
+- `REDIS_DB=0`
+- `REDIS_USERNAME=<usuario do redis, se existir>`
 - `REDIS_PASSWORD=<senha do redis>`
 - `ALLOWED_ORIGINS=https://<url-do-web>`
 - `SWAGGER_ENABLED=false`
 - `SWAGGER_USER=<usuario do swagger>`
 - `SWAGGER_PASSWORD=<senha do swagger>`
 
-Após o primeiro deploy, execute migration:
+Exemplo para gerar segredos e hash:
 
 ```bash
-npm run db:migrate --workspace @directcash/api
+openssl rand -hex 32
+node -e "require('bcrypt').hash('not-used-in-login', 10).then(console.log)"
+```
+
+Configure no Railway um Pre-Deploy Command para aplicar migrations:
+
+```bash
+npm run db:migrate:deploy --workspace @directcash/api
 ```
 
 Opcionalmente, rode seed:
@@ -251,6 +263,18 @@ Opcionalmente, rode seed:
 ```bash
 npm run db:seed --workspace @directcash/api
 ```
+
+### Serviço `worker`
+
+Configuração:
+
+- Dockerfile path: `Dockerfile.api`
+- Start command: `node apps/api/dist/worker.js`
+
+Variáveis de ambiente:
+
+- reutilize as mesmas variáveis do serviço `api`
+- `PORT` pode permanecer `3333`; o worker não expõe HTTP, mas a variável continua aceita pelo bootstrap compartilhado
 
 ### Serviço `web`
 
