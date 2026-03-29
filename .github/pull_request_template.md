@@ -2,8 +2,6 @@
 
 <!-- Describe the problem and how this PR solves it -->
 
-Closes MSC-ticket_number
-
 ## Changes
 
 -
