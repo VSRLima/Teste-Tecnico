@@ -563,6 +563,40 @@
   padding: 1.5rem;
 }
 
+.usersModal {
+  width: min(1080px, 100%);
+  max-height: min(88vh, 920px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.usersModalBody {
+  display: grid;
+  gap: 1rem;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.35rem;
+}
+
+.usersModalPanels {
+  display: grid;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.usersModalPanelsEditing {
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  align-items: start;
+}
+
+.usersListPane {
+  min-height: 0;
+}
+
+.editorPanel {
+  align-content: start;
+}
+
 .modalHeader {
   display: flex;
   justify-content: space-between;
@@ -594,6 +628,10 @@
   .hero,
   .workspace,
   .cardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .usersModalPanelsEditing {
     grid-template-columns: 1fr;
   }
 }

@@ -1658,7 +1658,7 @@ export function DashboardApp() {
           role="presentation"
         >
           <div
-            className={styles.modal}
+            className={`${styles.modal} ${styles.usersModal}`}
             onClick={(event) => event.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -1688,200 +1688,220 @@ export function DashboardApp() {
               </div>
             </div>
 
-            <div className={styles.form}>
+            <div className={styles.usersModalBody}>
               {renderDismissibleFeedback(locale, usersFeedback, () =>
                 setUsersFeedback(null),
               )}
 
-              {isUsersLoading ? (
-                <p className={styles.mutedBox}>{messages.loadingUsers}</p>
-              ) : managedUsers.length === 0 ? (
-                <div className={styles.emptyState}>{messages.noUsers}</div>
-              ) : (
-                <div className={styles.userDirectory}>
-                  {managedUsers.map((managedUser) => {
-                    const isCurrentSessionUser = managedUser.id === user?.sub;
+              <div
+                className={`${styles.usersModalPanels} ${
+                  editingManagedUserId ? styles.usersModalPanelsEditing : ''
+                }`}
+              >
+                <div className={styles.usersListPane}>
+                  {isUsersLoading ? (
+                    <p className={styles.mutedBox}>{messages.loadingUsers}</p>
+                  ) : managedUsers.length === 0 ? (
+                    <div className={styles.emptyState}>{messages.noUsers}</div>
+                  ) : (
+                    <div className={styles.userDirectory}>
+                      {managedUsers.map((managedUser) => {
+                        const isCurrentSessionUser =
+                          managedUser.id === user?.sub;
 
-                    return (
-                      <article className={styles.userCard} key={managedUser.id}>
-                        <div className={styles.userCardHeader}>
-                          <div className={styles.userIdentity}>
-                            <strong>{managedUser.name}</strong>
-                            <span>{managedUser.email}</span>
-                          </div>
-                          <span className={styles.statusPill}>
-                            {formatRole(locale, managedUser.role)}
-                          </span>
-                        </div>
-
-                        {isCurrentSessionUser ? (
-                          <p className={styles.userNote}>
-                            {messages.currentSessionUser}
-                          </p>
-                        ) : null}
-
-                        <div className={styles.actionRow}>
-                          <button
-                            className={styles.secondaryButton}
-                            disabled={isCurrentSessionUser || isUsersLoading}
-                            onClick={() => startManagedUserEdit(managedUser)}
-                            type="button"
+                        return (
+                          <article
+                            className={styles.userCard}
+                            key={managedUser.id}
                           >
-                            {messages.editUser}
-                          </button>
-                          <button
-                            className={styles.dangerButton}
-                            disabled={isCurrentSessionUser || isUsersLoading}
-                            onClick={() =>
-                              void handleDeleteManagedUser(managedUser)
-                            }
-                            type="button"
-                          >
-                            {messages.delete}
-                          </button>
-                        </div>
-                      </article>
-                    );
-                  })}
+                            <div className={styles.userCardHeader}>
+                              <div className={styles.userIdentity}>
+                                <strong>{managedUser.name}</strong>
+                                <span>{managedUser.email}</span>
+                              </div>
+                              <span className={styles.statusPill}>
+                                {formatRole(locale, managedUser.role)}
+                              </span>
+                            </div>
+
+                            {isCurrentSessionUser ? (
+                              <p className={styles.userNote}>
+                                {messages.currentSessionUser}
+                              </p>
+                            ) : null}
+
+                            <div className={styles.actionRow}>
+                              <button
+                                className={styles.secondaryButton}
+                                disabled={
+                                  isCurrentSessionUser || isUsersLoading
+                                }
+                                onClick={() =>
+                                  startManagedUserEdit(managedUser)
+                                }
+                                type="button"
+                              >
+                                {messages.editUser}
+                              </button>
+                              <button
+                                className={styles.dangerButton}
+                                disabled={
+                                  isCurrentSessionUser || isUsersLoading
+                                }
+                                onClick={() =>
+                                  void handleDeleteManagedUser(managedUser)
+                                }
+                                type="button"
+                              >
+                                {messages.delete}
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {editingManagedUserId ? (
-                <div className={styles.editorPanel}>
-                  <div>
-                    <span className={styles.sectionLabel}>
-                      {messages.users}
-                    </span>
-                    <h4 className={styles.editorTitle}>
-                      {messages.editUserTitle}
-                    </h4>
-                    <p className={styles.panelLead}>{messages.editUserLead}</p>
-                  </div>
+                {editingManagedUserId ? (
+                  <div className={styles.editorPanel}>
+                    <div>
+                      <span className={styles.sectionLabel}>
+                        {messages.users}
+                      </span>
+                      <h4 className={styles.editorTitle}>
+                        {messages.editUserTitle}
+                      </h4>
+                      <p className={styles.panelLead}>
+                        {messages.editUserLead}
+                      </p>
+                    </div>
 
-                  <form
-                    className={styles.form}
-                    noValidate
-                    onSubmit={handleManagedUserSubmit}
-                  >
-                    <div className={styles.formGrid}>
-                      <label className={styles.field}>
-                        <span>{messages.name}</span>
-                        <input
-                          aria-invalid={Boolean(managedUserErrors.name)}
-                          onChange={(event) => {
-                            setManagedUserForm((current) => ({
-                              ...current,
-                              name: event.target.value,
-                            }));
-                            setManagedUserErrors((current) => {
-                              const next = { ...current };
-                              delete next.name;
-                              return next;
-                            });
-                            setUsersFeedback(null);
-                          }}
-                          value={managedUserForm.name}
-                        />
-                        {renderFieldMessage(managedUserErrors.name)}
-                      </label>
+                    <form
+                      className={styles.form}
+                      noValidate
+                      onSubmit={handleManagedUserSubmit}
+                    >
+                      <div className={styles.formGrid}>
+                        <label className={styles.field}>
+                          <span>{messages.name}</span>
+                          <input
+                            aria-invalid={Boolean(managedUserErrors.name)}
+                            onChange={(event) => {
+                              setManagedUserForm((current) => ({
+                                ...current,
+                                name: event.target.value,
+                              }));
+                              setManagedUserErrors((current) => {
+                                const next = { ...current };
+                                delete next.name;
+                                return next;
+                              });
+                              setUsersFeedback(null);
+                            }}
+                            value={managedUserForm.name}
+                          />
+                          {renderFieldMessage(managedUserErrors.name)}
+                        </label>
 
-                      <label className={styles.field}>
-                        <span>{messages.role}</span>
-                        <select
-                          aria-invalid={Boolean(managedUserErrors.role)}
-                          onChange={(event) => {
-                            setManagedUserForm((current) => ({
-                              ...current,
-                              role: event.target.value as Role,
-                            }));
-                            setManagedUserErrors((current) => {
-                              const next = { ...current };
-                              delete next.role;
-                              return next;
-                            });
-                            setUsersFeedback(null);
-                          }}
-                          value={managedUserForm.role}
+                        <label className={styles.field}>
+                          <span>{messages.role}</span>
+                          <select
+                            aria-invalid={Boolean(managedUserErrors.role)}
+                            onChange={(event) => {
+                              setManagedUserForm((current) => ({
+                                ...current,
+                                role: event.target.value as Role,
+                              }));
+                              setManagedUserErrors((current) => {
+                                const next = { ...current };
+                                delete next.role;
+                                return next;
+                              });
+                              setUsersFeedback(null);
+                            }}
+                            value={managedUserForm.role}
+                          >
+                            {roles.map((role) => (
+                              <option key={role} value={role}>
+                                {formatRole(locale, role)}
+                              </option>
+                            ))}
+                          </select>
+                          {renderFieldMessage(managedUserErrors.role)}
+                        </label>
+
+                        <label className={styles.field}>
+                          <span>{messages.email}</span>
+                          <input
+                            aria-invalid={Boolean(managedUserErrors.email)}
+                            onChange={(event) => {
+                              setManagedUserForm((current) => ({
+                                ...current,
+                                email: event.target.value,
+                              }));
+                              setManagedUserErrors((current) => {
+                                const next = { ...current };
+                                delete next.email;
+                                return next;
+                              });
+                              setUsersFeedback(null);
+                            }}
+                            type="email"
+                            value={managedUserForm.email}
+                          />
+                          {renderFieldMessage(managedUserErrors.email)}
+                        </label>
+
+                        <label className={styles.field}>
+                          <span>{messages.password}</span>
+                          <input
+                            aria-invalid={Boolean(managedUserErrors.password)}
+                            onChange={(event) => {
+                              setManagedUserForm((current) => ({
+                                ...current,
+                                password: event.target.value,
+                              }));
+                              setManagedUserErrors((current) => {
+                                const next = { ...current };
+                                delete next.password;
+                                return next;
+                              });
+                              setUsersFeedback(null);
+                            }}
+                            placeholder={messages.passwordExample}
+                            type="password"
+                            value={managedUserForm.password}
+                          />
+                          {renderFieldMessage(
+                            managedUserErrors.password,
+                            messages.leavePasswordBlank,
+                          )}
+                        </label>
+                      </div>
+
+                      <div className={styles.actionRow}>
+                        <button
+                          className={styles.primaryButton}
+                          disabled={isEditingUser}
+                          type="submit"
                         >
-                          {roles.map((role) => (
-                            <option key={role} value={role}>
-                              {formatRole(locale, role)}
-                            </option>
-                          ))}
-                        </select>
-                        {renderFieldMessage(managedUserErrors.role)}
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>{messages.email}</span>
-                        <input
-                          aria-invalid={Boolean(managedUserErrors.email)}
-                          onChange={(event) => {
-                            setManagedUserForm((current) => ({
-                              ...current,
-                              email: event.target.value,
-                            }));
-                            setManagedUserErrors((current) => {
-                              const next = { ...current };
-                              delete next.email;
-                              return next;
-                            });
-                            setUsersFeedback(null);
-                          }}
-                          type="email"
-                          value={managedUserForm.email}
-                        />
-                        {renderFieldMessage(managedUserErrors.email)}
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>{messages.password}</span>
-                        <input
-                          aria-invalid={Boolean(managedUserErrors.password)}
-                          onChange={(event) => {
-                            setManagedUserForm((current) => ({
-                              ...current,
-                              password: event.target.value,
-                            }));
-                            setManagedUserErrors((current) => {
-                              const next = { ...current };
-                              delete next.password;
-                              return next;
-                            });
-                            setUsersFeedback(null);
-                          }}
-                          placeholder={messages.passwordExample}
-                          type="password"
-                          value={managedUserForm.password}
-                        />
-                        {renderFieldMessage(
-                          managedUserErrors.password,
-                          messages.leavePasswordBlank,
-                        )}
-                      </label>
-                    </div>
-
-                    <div className={styles.actionRow}>
-                      <button
-                        className={styles.primaryButton}
-                        disabled={isEditingUser}
-                        type="submit"
-                      >
-                        {isEditingUser
-                          ? messages.saving
-                          : messages.saveUserChanges}
-                      </button>
-                      <button
-                        className={styles.ghostButton}
-                        onClick={resetManagedUserDraft}
-                        type="button"
-                      >
-                        {messages.cancel}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              ) : null}
+                          {isEditingUser
+                            ? messages.saving
+                            : messages.saveUserChanges}
+                        </button>
+                        <button
+                          className={styles.ghostButton}
+                          onClick={resetManagedUserDraft}
+                          type="button"
+                        >
+                          {messages.cancel}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
