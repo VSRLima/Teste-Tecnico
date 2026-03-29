@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role as PrismaRole, User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import {
+  normalizeDisplayText,
+  normalizeEmail,
+} from '../common/utils/normalization';
 import { PrismaService } from '../prisma/prisma.service';
 import { Role } from '../common/constants/roles';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -38,6 +42,8 @@ export class UsersService {
     return this.prisma.user.create({
       data: {
         ...data,
+        email: normalizeEmail(data.email),
+        name: normalizeDisplayText(data.name),
         role: (data.role ?? 'USER') as PrismaRole,
       },
     });
@@ -45,7 +51,7 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<UserRecord | null> {
     return this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizeEmail(email) },
     });
   }
 
@@ -92,8 +98,8 @@ export class UsersService {
     }
 
     const data: Prisma.UserUpdateInput = {
-      ...(dto.name !== undefined && { name: dto.name }),
-      ...(dto.email !== undefined && { email: dto.email }),
+      ...(dto.name !== undefined && { name: normalizeDisplayText(dto.name) }),
+      ...(dto.email !== undefined && { email: normalizeEmail(dto.email) }),
       ...(dto.role !== undefined && { role: dto.role as PrismaRole }),
       ...(dto.password !== undefined && {
         passwordHash: await bcrypt.hash(dto.password, 10),
