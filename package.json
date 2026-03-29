@@ -16,6 +16,7 @@
     "dev:web": "npm run dev --workspace @directcash/web",
     "dev:api": "npm run dev --workspace @directcash/api",
     "dev:worker": "npm run start:worker:dev --workspace @directcash/api",
+    "db:generate:api": "npm exec --workspace @directcash/api prisma generate",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test:api": "npm run test --workspace @directcash/api -- --runInBand",
@@ -23,6 +24,7 @@
     "ci": "node ./scripts/run-ci.cjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "postinstall": "npm run db:generate:api",
     "prepare": "husky"
   },
   "lint-staged": {

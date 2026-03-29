@@ -1,6 +1,7 @@
 const { spawnSync } = require('node:child_process');
 
 const steps = [
+  ['npm', ['run', 'db:generate:api']],
   ['npm', ['run', 'lint']],
   ['npm', ['run', 'test:e2e:api']],
   ['npm', ['run', 'test:api']],
